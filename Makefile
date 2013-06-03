@@ -3,20 +3,17 @@
 # doc2: http://netbsd.gw.com/cgi-bin/man-cgi?make+1+NetBSD-current
 
 CXX      = nvcc
-#CFLAGS   = -ggdb -O3 -ffast-math -msse2 -msse3
-#CFLAGS   = -arch=sm_20 -lcutil -lcurand
-CFLAGS   = -lcutil -lcurand
+CFLAGS   = -Iinclude
 
-LIBS     =
-#-lcudart
+LIBS     = -lcutil -lcurand -lgsl -lgslcblas
 #-L../opt/boost/lib -I../opt/boost/include
-APPNAME  = gdust
+APPNAME  = gdustdtw
 
 #####################################################################
 
 
-SRC	= $(wildcard *.cu)
-HDR	= $(wildcard *.hpp)
+SRC	= $(wildcard src/*.cu)
+HDR	= $(wildcard include/*.hpp)
 OBJ	= $(addsuffix .o, $(basename $(SRC)))
 
 
@@ -49,6 +46,6 @@ trailer:
 .PHONY: all clean header dist
 
 clean:
-	@rm -rf *.o *.dSYM $(APPNAME)
+	@rm -rf src/*.o *.dSYM $(APPNAME)
 
 # eof

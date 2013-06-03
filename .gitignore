@@ -1,0 +1,4 @@
+data/
+datasets/
+udatasets/
+*.o
