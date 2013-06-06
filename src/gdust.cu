@@ -9,7 +9,7 @@
 #include <cassert>
 
 #define VERYSMALL 1E-20
-//#define VERYSMALL 1E-5
+
 
 inline float clean_probability( float p )
 {
@@ -37,6 +37,9 @@ float GDUST::phi( RandomVariable &x, RandomVariable &y )
         y.stddev
     };
 
+    // float int4 = this->integ->integrate( 4, params );
+    // std::cout << "gdust int4 : " << int4 << std::endl;
+    
     // p(x|r(x)=v)p(r(x)=v) and p(y|r(y)=v)p(r(y)=v)
     float int1 = clean_probability( (this->integ)->integrate( 1, params ) );
     float int2 = clean_probability( (this->integ)->integrate( 2, params ) );
@@ -65,8 +68,9 @@ float GDUST::phi( RandomVariable &x, RandomVariable &y )
         std::cerr << "int1:" << int1 << " int2:" << int2 << " int3:" << int3 << std::endl;
         std::cerr << std::endl;
     }
-    assert( NOTNANINF(int3) );
+//    assert( NOTNANINF(int3) );
 
+//    return int3 / (int1 * int2);
     return int3;
 }
 

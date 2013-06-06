@@ -139,15 +139,12 @@ __device__ float pdf_normal( float mean, float sd, float x )
     if(isinf(x)) return 0; // pdf(infinity) is zero.
 
     float result = 0.0f;
-    // if(false == check_scale(sd, &result)) return result;
-    // if(false == check_location(mean, &result)) return result;
-    // if(false == check_x(x, &result)) return result;
 
     float exponent = x - mean;
     exponent *= ( (-1) * exponent );
     exponent /= ( 2 * sd * sd );
 
-    result = exp( exponent );
+    result = __expf( exponent );
     result /= sd * sqrt( 2 * PI_FLOAT );
 
     return result;
@@ -176,34 +173,27 @@ myPDF( int distribution, float mean, float stddev, float v )
 
 // calculate p(y|r(y)=v)p(r(y)=v)
 __device__ float
-f1 ( float k, size_t dim, float *fp )
+f1 ( float v, float *params )
 {
-    float x = fp[ PARAM_X_OBSERVATION ];
-    float v = k;  // random input
-
-    float p1 = myPDF( fp[ PARAM_X_DISTRIBUTION ],    // distribution
-                      0.0f,                          // mean
-                      fp[ PARAM_X_STDDEV ],          // stddev
-                      x-v );                         // target
+    float p1 = myPDF( params[ PARAM_X_DISTRIBUTION ],   // distribution
+                      0.0f,                                // mean
+                      params[ PARAM_X_STDDEV ],         // stddev
+                      params[ PARAM_X_OBSERVATION ]-v ); // target
     
     float p2 = pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
 
-//    if (isnan(p1) || isnan(p2)) return 89898989;
     return p1 * p2;
 }
 
 
 // calculate p(y|r(y)=v)p(r(y)=v)
 __device__ float
-f2 ( float k, size_t dim, float *fp )
+f2 ( float v, float *params )
 {
-    float y = fp[ PARAM_Y_OBSERVATION ];
-    float v = k;
-
-    float p1 = myPDF( fp[ PARAM_Y_DISTRIBUTION ], // distribution
-                      0,                          // mean
-                      fp[ PARAM_Y_STDDEV ],       // stddev
-                      y-v );                      // target
+    float p1 = myPDF( params[ PARAM_Y_DISTRIBUTION ],   // distribution
+                      0.0f,                                // mean
+                      params[ PARAM_Y_STDDEV ],         // stddev
+                      params[ PARAM_Y_OBSERVATION ] - v );  // target
     
     float p2 = pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
     
@@ -213,61 +203,60 @@ f2 ( float k, size_t dim, float *fp )
 
 // p(r(x)=z|x) * p(r(y)=z|y)
 __device__ float
-f3 ( float k, size_t dim, float *fp )
+f3 ( float z, float *params )
 {
-    float int1 = fp[ PARAM_INT1 ];
-    float int2 = fp[ PARAM_INT2 ];
-    int xdistrib = (int)fp[ PARAM_X_DISTRIBUTION ];
-    float x = fp[ PARAM_X_OBSERVATION ] - 0.1f;
-    float xstddev = fp[ PARAM_X_STDDEV ];
-    int ydistrib = (int)fp[ PARAM_Y_DISTRIBUTION ];
-    float y = fp[ PARAM_Y_OBSERVATION ] + 0.1f;
-    float ystddev = fp[ PARAM_Y_STDDEV ];
-    float z = k;
+    float int1 = params[ PARAM_INT1 ];
+    float int2 = params[ PARAM_INT2 ];
+    int x_dist = (int)params[ PARAM_X_DISTRIBUTION ];
+    float x = params[ PARAM_X_OBSERVATION ] - 0.1f;
+    float x_stddev = params[ PARAM_X_STDDEV ];
+    int y_dist = (int)params[ PARAM_Y_DISTRIBUTION ];
+    float y = params[ PARAM_Y_OBSERVATION ] + 0.1f;
+    float y_stddev = params[ PARAM_Y_STDDEV ];
 
-//    assert( xstddev >= 0 );
-//    assert( ystddev >= 0 );
-//    assert( ( int1 != 0 ) && ( int2 != 0 ) );
-
+    
     float p1, p2;
 
-    if ( xdistrib == RANDVAR_UNIFORM ) {
-        float xadjust = 0;
-        float yadjust = 0;
+    if ( x_dist == RANDVAR_UNIFORM ) {
+        float x_adjust = 0;
+        float y_adjust = 0;
 
-        if ( abs(x-z) > xstddev * SQRT3 ) {
-            xadjust = myPDF( xdistrib, 0, xstddev, 0 ) *
-                ( 1 + erf( -( abs(x-z) - xstddev * SQRT3 ) ) );
+        if ( abs(x-z) > x_stddev * SQRT3 ) {
+            x_adjust = myPDF( x_dist, 0, x_stddev, 0 ) *
+                ( 1 + erf( -( abs(x-z) - x_stddev * SQRT3 ) ) );
         }
         
-        if ( abs(y-z) > ystddev * SQRT3 ) {
-            yadjust = myPDF( ydistrib, 0, ystddev, 0 ) *
-                ( 1 + erf( -( abs(y-z) - ystddev * SQRT3 ) ) );
+        if ( abs(y-z) > y_stddev * SQRT3 ) {
+            y_adjust = myPDF( y_dist, 0, y_stddev, 0 ) *
+                ( 1 + erf( -( abs(y-z) - y_stddev * SQRT3 ) ) );
         }
 
-        float pdfx = myPDF( xdistrib, 0, xstddev, x-z ) + xadjust;
-        float pdfy = myPDF( ydistrib, 0, ystddev, y-z ) + yadjust;
+        float pdf_x = myPDF( x_dist, 0.0f, x_stddev, x-z ) + x_adjust;
+        float pdf_y = myPDF( y_dist, 0.0f, y_stddev, y-z ) + y_adjust;
 
-        p1 = pdfx * pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) / int1;
-        p2 = pdfy * pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) / int2;
+        p1 = pdf_x * pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
+        p2 = pdf_y * pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
         
     } else {
         // p(r(x)=z|x) and p(r(y)=z|y)
-        p1 = myPDF( xdistrib, 0, xstddev, x-z ) * pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) / int1;
-        p2 = myPDF( ydistrib, 0, ystddev, y-z ) * pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) / int2;
+        p1 = ( myPDF( x_dist, 0, x_stddev, x-z ) *
+               pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
+        p2 = ( myPDF( y_dist, 0, y_stddev, y-z ) *
+               pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
     }
 
-    float ret = p1 * p2;
+    float ret = p1 * p2 / (int1 * int2);
+//    float ret = p1 * p2;
 
     return ret;
 }
 
 
 __device__ float
-f4 ( float k, size_t dim, float *fp )
+f4 ( float k, float *params )
 {
-    float ret = pdf_uniform( -1, 1, k );
-    return ret;
+    float ret = k;
+    return 1.0;
 }
 
 
@@ -281,14 +270,15 @@ __global__ void integrate_kernel(
     float range_max )
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    // random input "input_array[idx]" is 0 to 1,
-    // so we need to apply them to the range of integration.
-    float input = ( input_array[ idx ] * (range_max - range_min) ) + range_min;
     
-    if (fnum == 1) output_array[ idx ] = f1( input, 1, (float *)params );
-    if (fnum == 2) output_array[ idx ] = f2( input, 1, (float *)params );
-    if (fnum == 3) output_array[ idx ] = f3( input, 1, (float *)params );
-    if (fnum == 4) output_array[ idx ] = f4( input, 1, (float *)params );    
+    // random input "input_array[idx]" is (0, 1]
+    // so we need to apply them to the range of integration.
+     float input = ( input_array[ idx ] * (range_max - range_min) ) + range_min;
+    
+    if (fnum == 1) output_array[ idx ] = f1( input, (float *)params );
+    if (fnum == 2) output_array[ idx ] = f2( input, (float *)params );
+    if (fnum == 3) output_array[ idx ] = f3( input, (float *)params );
+    if (fnum == 4) output_array[ idx ] = f4( input, (float *)params );
 }
+
 

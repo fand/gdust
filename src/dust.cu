@@ -78,6 +78,7 @@ double myPDF( int distribution, double mean, double stddev, double v )
 
 double f4 ( double *k, size_t dim, void *params )
 {
+    return 1.0;
     RandomVariable **pair = ( RandomVariable ** )params;
 //    double ret = myPDF( pair[0]->distribution, 0, pair[0]->stddev, x-v ) * pdf( valueUniform, v );
     uniform valueUniform( -RANGE_VALUE, RANGE_VALUE );
@@ -87,7 +88,7 @@ double f4 ( double *k, size_t dim, void *params )
                         (pair[0]->observation) - k[0] );
 
 //    ret = pdf( valueUniform, k[0] );
-    return ret;
+
 }
 
 
@@ -225,13 +226,6 @@ double DUST::phi( RandomVariable &x, RandomVariable &y )
     integration_interval[0] = -16;
     integration_interval[1] = +16;
 
-/////////////////////////////////////////////////
-//    std::cout << x.observation << ", " << x.stddev << ", " << x.distribution << std::endl;
-//    std::cout << y.observation << ", " << y.stddev << ", " << y.distribution << std::endl;
-//    std::cout << integrate( f4, (void *)pair ) << std::endl;
-//    exit(0);
-//////////////////////////////////////////////////
-    
     double int1 = clean_probability( integrate(f1, (void *)pair) );
     double int2 = clean_probability( integrate(f2, (void *)pair) );
 
@@ -277,8 +271,9 @@ double DUST::phi( RandomVariable &x, RandomVariable &y )
 //        exit(0);
     }
 
-    assert( NOTNANINF(int3) );
-    return int3;
+    // assert( NOTNANINF(int3) );
+    // return int3;
+    return integrate( f4, (void *)params );
 }
 
 
@@ -477,15 +472,13 @@ double DUST::dust( RandomVariable &x, RandomVariable &y )
     // if(K < 0) K = 0;
     // assert( NOTNANINF(K) );
 
-//    std::cout << "phi :" << phi(x,y) << std::endl;
-
     double distance = -log10( phi(x,y) ) -K;
     if (distance < 0) {
         distance = 0;
     }
     distance = sqrt(distance);
     assert( NOTNANINF(distance) );
-    
+
     return distance;
 }
 

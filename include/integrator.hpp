@@ -12,7 +12,7 @@ public:
     float integrate( int fnum, float *param );
 
 private:
-    float *in, *out, *param, *sum;
+    float *in, *out, *sum;
     float *in_GPU, *out_GPU, *param_GPU, *sum_GPU;
     curandGenerator_t *gen;
 };

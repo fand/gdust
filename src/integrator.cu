@@ -20,10 +20,11 @@
 
 #define PARAM_SIZE 8
 
-#define INTEGRATION_SAMPLES 49152
-#define BLOCK_SIZE 512
-#define TPB 512
-//#define BLOCK_SIZE 384
+#define INTEGRATION_SAMPLES 16384
+//#define TPB 512
+//#define BPG 96
+#define TPB 256
+#define BPG 64
 
 
 Integrator::~Integrator()
@@ -46,12 +47,12 @@ Integrator::Integrator()
     
     this->in = (float *)malloc(size);
     this->out = (float *)malloc(size);
-    this->sum = (float *)malloc(size);
+    this->sum = (float *)malloc(sizeof(float) * BPG);
 
     CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->in_GPU), size ) );
     CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->out_GPU), size ) );
     CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->param_GPU), sizeof(float) * PARAM_SIZE ) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->sum_GPU), size / TPB ) );
+    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->sum_GPU), sizeof(float) * BPG ) );
     
     this->gen = new curandGenerator_t();
     curandCreateGenerator( this->gen, CURAND_RNG_PSEUDO_MTGP32 );
@@ -67,11 +68,9 @@ float Integrator::integrate( int fnum, float *param )
 {
     float range_min = INTEG_RANGE_MIN;    // -16
     float range_max = INTEG_RANGE_MAX;    // +16
-    float result;
+
 
     int calls = INTEGRATION_SAMPLES;    // 49152
-
-    size_t size_array = sizeof(float) * calls;
 
 
     CUDA_SAFE_CALL(
@@ -81,8 +80,8 @@ float Integrator::integrate( int fnum, float *param )
                     cudaMemcpyHostToDevice ) );
     
     // exec!
-    dim3 blocks( calls / BLOCK_SIZE, 1, 1 );
-    dim3 threads( BLOCK_SIZE, 1, 1 );
+    dim3 blocks( BPG, 1, 1 );
+    dim3 threads( TPB, 1, 1 );
 
     integrate_kernel<<< blocks, threads >>>( this->param_GPU,
                                              fnum,
@@ -90,43 +89,32 @@ float Integrator::integrate( int fnum, float *param )
                                              this->out_GPU,
                                              range_min,
                                              range_max );
+/*
+    CUDA_SAFE_CALL(
+        cudaMemcpy( this->out, this->out_GPU,
+                    sizeof(float) * calls, cudaMemcpyDeviceToHost ) );
 
+    float tes = 0;
+    for (int j=0; j<calls; j++) {
+        if (fnum == 4 && this->out[j] != 1.0f) {
+            std::cout << "f4 error : " << this->out[j] << std::endl;
+//            exit(1);
+        }
+        tes += this->out[j];
+    }
+*/
 
-    reduce<float>(calls, TPB, calls/TPB, this->out_GPU, this->sum_GPU);
+    reduce<float>(calls, TPB, BPG, this->out_GPU, this->sum_GPU);
 
     CUDA_SAFE_CALL( cudaMemcpy( this->sum,
                                 this->sum_GPU,
-                                sizeof(float) * calls/TPB,
+                                sizeof(float) * BPG,
                                 cudaMemcpyDeviceToHost ) );
-
 
     float tes = 0;
-    for (int i=0; i < calls/TPB; i++) {
+    for (int i=0; i < BPG; i++) {
         tes += sum[i];
     }
-    result = tes * ( range_max - range_min ) / (float)calls;
-    
-    // float tes = this->sum[0] / calls;
-    // result = tes * ( range_max - range_min );
 
-    
-/*
-    CUDA_SAFE_CALL( cudaMemcpy( this->out,
-                                this->out_GPU,
-                                size_array,
-                                cudaMemcpyDeviceToHost ) );
-
-    float sum = 0.0f;
-    for ( int i = 0; i < calls; i++ ) {
-        if (this->out[i] == 89898989) {
-            std::cout << "OMG p1 or p2 is nan!!" << std::endl;
-            exit(0);
-        }
-        sum += this->out[i];
-    }
-    result = sum * ( range_max - range_min ) / (float)calls;
-*/
-
-    
-    return result;
+    return tes * ( range_max - range_min ) / calls;
 }
