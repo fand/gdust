@@ -205,8 +205,6 @@ f2 ( float v, float *params )
 __device__ float
 f3 ( float z, float *params )
 {
-    float int1 = params[ PARAM_INT1 ];
-    float int2 = params[ PARAM_INT2 ];
     int x_dist = (int)params[ PARAM_X_DISTRIBUTION ];
     float x = params[ PARAM_X_OBSERVATION ] - 0.1f;
     float x_stddev = params[ PARAM_X_STDDEV ];
@@ -245,17 +243,13 @@ f3 ( float z, float *params )
                pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
     }
 
-    float ret = p1 * p2 / (int1 * int2);
-//    float ret = p1 * p2;
-
-    return ret;
+    return p1 * p2;
 }
 
 
 __device__ float
 f4 ( float k, float *params )
 {
-    float ret = k;
     return 1.0;
 }
 
@@ -282,3 +276,45 @@ __global__ void integrate_kernel(
 }
 
 
+
+
+
+__global__ void phi_kernel(
+    void *params,
+    float *in,
+    float *out1,
+    float *out2,
+    float *out3,
+    float range_min,
+    float range_max,
+    int loop_num)
+{
+    float input;
+    
+    float o1 = 0;
+    float o2 = 0;
+    float o3 = 0;
+
+
+    // MAP PHASE
+    int i, index;
+    for (i = 0; i < loop_num; i++) {
+        input = (in[loop_num * i + threadIdx.x] * (range_max - range_min)) + range_min;
+        
+        o1 += f1( input, (float *)params );
+        o2 += f2( input, (float *)params );
+        o3 += f3( input, (float *)params );
+    }
+
+    out1[threadIdx.x] = o1;
+    out2[threadIdx.x] = o2;
+    out3[threadIdx.x] = o3;
+
+
+
+    // REDUCE PHASE
+    
+    
+    
+    
+}

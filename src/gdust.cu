@@ -37,6 +37,9 @@ float GDUST::phi( RandomVariable &x, RandomVariable &y )
         y.stddev
     };
 
+    float res = this->integ->phi(params);
+    return res;
+    
     // float int4 = this->integ->integrate( 4, params );
     // std::cout << "gdust int4 : " << int4 << std::endl;
     
@@ -63,15 +66,15 @@ float GDUST::phi( RandomVariable &x, RandomVariable &y )
     float int3 = (this->integ)->integrate( 3, params );
     int3 = clean_probability( int3 );
 
-    if (int3 == 0.0f) {
+//    if (int3 == 0.0f) {
+    if (1) {
         std::cerr << "gdust:" << std::endl;
         std::cerr << "int1:" << int1 << " int2:" << int2 << " int3:" << int3 << std::endl;
         std::cerr << std::endl;
     }
 //    assert( NOTNANINF(int3) );
 
-//    return int3 / (int1 * int2);
-    return int3;
+    return int3 / (int1 * int2);
 }
 
 
