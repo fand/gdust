@@ -20,7 +20,6 @@
 #define PARAM_Y_STDDEV 7
 
 
-
 __device__ bool
 check_uniform_lower(float lower, float *result) {
     if (isfinite(lower)) {
@@ -250,7 +249,7 @@ f3 ( float z, float *params )
 __device__ float
 f4 ( float k, float *params )
 {
-    return 1.0;
+    return 1.0f;
 }
 
 
@@ -282,39 +281,130 @@ __global__ void integrate_kernel(
 __global__ void phi_kernel(
     void *params,
     float *in,
-    float *out1,
-    float *out2,
-    float *out3,
-    float range_min,
-    float range_max,
-    int loop_num)
+    float *answer_GPU)
 {
     float input;
     
-    float o1 = 0;
-    float o2 = 0;
-    float o3 = 0;
+    float o1 = 0.0f;
+    float o2 = 0.0f;
+    float o3 = 0.0f;
 
+    __shared__ float sdata[TPB];
 
     // MAP PHASE
-    int i, index;
-    for (i = 0; i < loop_num; i++) {
-        input = (in[loop_num * i + threadIdx.x] * (range_max - range_min)) + range_min;
-        
+    for (int i = threadIdx.x; i < INTEGRATION_SAMPLES; i += blockDim.x) {
+        input = in[i] * RANGE_WIDTH + RANGE_MIN;
         o1 += f1( input, (float *)params );
         o2 += f2( input, (float *)params );
         o3 += f3( input, (float *)params );
     }
-
-    out1[threadIdx.x] = o1;
-    out2[threadIdx.x] = o2;
-    out3[threadIdx.x] = o3;
-
-
-
+    
+    
     // REDUCE PHASE
+    float s1, s2, s3;
     
-    
-    
-    
+    sdata[threadIdx.x] = o1;
+    reduceBlock(sdata, &s1, TPB);
+
+    sdata[threadIdx.x] = o2;
+    reduceBlock(sdata, &s2, TPB);
+
+    sdata[threadIdx.x] = o3;
+    reduceBlock(sdata, &s3, TPB);
+
+    float r = (float)RANGE_WIDTH / INTEGRATION_SAMPLES;
+
+    if (threadIdx.x == 0) {
+        *answer_GPU = s3 / (s1 * s2 * r);
+    }
 }
+
+
+
+__device__ void
+reduceBlock(float *sdata, float *odata, unsigned int n){
+
+    // make sure all threads are ready
+    __syncthreads();
+    
+    unsigned int tid = threadIdx.x;
+    float mySum = sdata[tid];
+    unsigned int blockSize = blockDim.x;
+    
+    // do reduction in shared mem
+    if (blockSize >= 512)
+    {
+        if (tid < 256)
+        {
+            sdata[tid] = mySum = mySum + sdata[tid + 256];
+        }
+
+        __syncthreads();
+    }
+
+    if (blockSize >= 256)
+    {
+        if (tid < 128)
+        {
+            sdata[tid] = mySum = mySum + sdata[tid + 128];
+        }
+
+        __syncthreads();
+    }
+
+    if (blockSize >= 128)
+    {
+        if (tid <  64)
+        {
+            sdata[tid] = mySum = mySum + sdata[tid +  64];
+        }
+
+        __syncthreads();
+    }
+
+    if (tid < 32)
+    {
+        // now that we are using warp-synchronous programming (below)
+        // we need to declare our shared memory volatile so that the compiler
+        // doesn't reorder stores to it and induce incorrect behavior.
+        volatile float *smem = sdata;
+
+        if (blockSize >=  64)
+        {
+            smem[tid] = mySum = mySum + smem[tid + 32];
+        }
+
+        if (blockSize >=  32)
+        {
+            smem[tid] = mySum = mySum + smem[tid + 16];
+        }
+
+        if (blockSize >=  16)
+        {
+            smem[tid] = mySum = mySum + smem[tid +  8];
+        }
+
+        if (blockSize >=   8)
+        {
+            smem[tid] = mySum = mySum + smem[tid +  4];
+        }
+
+        if (blockSize >=   4)
+        {
+            smem[tid] = mySum = mySum + smem[tid +  2];
+        }
+
+        if (blockSize >=   2)
+        {
+            smem[tid] = mySum = mySum + smem[tid +  1];
+        }
+    }
+ 
+    // write result for this block to global mem
+    if (threadIdx.x == 0) {
+        *odata = sdata[0];
+    }
+    
+    __syncthreads();
+}
+

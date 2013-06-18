@@ -20,5 +20,6 @@ private:
     float *sum1, *sum2, *sum3;
     float *out1_GPU, *out2_GPU, *out3_GPU;
     float *sum1_GPU, *sum2_GPU, *sum3_GPU;
+    float *answer_GPU;
 };
 

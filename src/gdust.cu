@@ -38,6 +38,7 @@ float GDUST::phi( RandomVariable &x, RandomVariable &y )
     };
 
     float res = this->integ->phi(params);
+    std::cout << "phi: " << res << std::endl;
     return res;
     
     // float int4 = this->integ->integrate( 4, params );
