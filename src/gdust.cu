@@ -26,9 +26,7 @@ void GDUST::init()
 float GDUST::phi( RandomVariable &x, RandomVariable &y )
 {
     // params to define functions
-    float params[8] = {
-        0.0f,
-        0.0f,
+    float params[6] = {
         (float)x.distribution,
         x.observation,
         x.stddev,
@@ -38,44 +36,8 @@ float GDUST::phi( RandomVariable &x, RandomVariable &y )
     };
 
     float res = this->integ->phi(params);
-    std::cout << "phi: " << res << std::endl;
+//    std::cout << "phi: " << res << std::endl;
     return res;
-    
-    // float int4 = this->integ->integrate( 4, params );
-    // std::cout << "gdust int4 : " << int4 << std::endl;
-    
-    // p(x|r(x)=v)p(r(x)=v) and p(y|r(y)=v)p(r(y)=v)
-    float int1 = clean_probability( (this->integ)->integrate( 1, params ) );
-    float int2 = clean_probability( (this->integ)->integrate( 2, params ) );
-    
-    if (int1 > 1.0f || int1 < 0.0f || !NOTNANINF(int1)) {
-        std::cout << "int1 error!" << int1 << std::endl;
-        exit(1);
-    }
-    if (int2 > 1.0f || int2 < 0.0f || !NOTNANINF(int2)) {
-        std::cout << "int2 error!" << int2 << std::endl;
-        exit(1);
-    }
-
-    if(int1 == 0.0f) int1 = VERYSMALL;
-    if(int2 == 0.0f) int2 = VERYSMALL;    
-    params[0] = int1;
-    params[1] = int2;
-    
-    // p(r(x)=r(y)|x,y)
-    // pdf for "real x == real y"
-    float int3 = (this->integ)->integrate( 3, params );
-    int3 = clean_probability( int3 );
-
-//    if (int3 == 0.0f) {
-    if (1) {
-        std::cerr << "gdust:" << std::endl;
-        std::cerr << "int1:" << int1 << " int2:" << int2 << " int3:" << int3 << std::endl;
-        std::cerr << std::endl;
-    }
-//    assert( NOTNANINF(int3) );
-
-    return int3 / (int1 * int2);
 }
 
 
