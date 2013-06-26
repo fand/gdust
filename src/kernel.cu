@@ -19,6 +19,16 @@
 #define PARAM_Y_STDDEV 5
 
 
+__constant__ __device__ float seq_const[6*1024];
+
+
+void copyToConst(void* src, size_t size)
+{
+    cudaMemcpyToSymbol(seq_const, src, size, 0, cudaMemcpyHostToDevice);
+}
+
+
+
 __device__ bool
 check_uniform_lower(float lower, float *result) {
     if (isfinite(lower)) {
@@ -126,10 +136,10 @@ verify_exp_x(float x, float *result) {
 __device__ float pdf_uniform( float lower, float upper, float x )
 {
     if ((x < lower) || (x > upper)) {
-        return 0;
+        return 0.0f;
     }
 
-    return 1.0 / (upper - lower);
+    return 1.0f / (upper - lower);
 }
 
 __device__ float pdf_normal( float mean, float sd, float x )
@@ -177,7 +187,7 @@ f1 ( float v, float *params )
                       0.0f,                                // mean
                       params[ PARAM_X_STDDEV ],         // stddev
                       params[ PARAM_X_OBSERVATION ]-v ); // target
-    
+     
     float p2 = pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
 
     return p1 * p2;
@@ -209,7 +219,6 @@ f3 ( float z, float *params )
     int y_dist = (int)params[ PARAM_Y_DISTRIBUTION ];
     float y = params[ PARAM_Y_OBSERVATION ] + 0.1f;
     float y_stddev = params[ PARAM_Y_STDDEV ];
-
     
     float p1, p2;
 
@@ -254,12 +263,12 @@ f4 ( float k, float *params )
 
 
 __global__ void distance_kernel(
-    float *seq_GPU,
+//    float *seq_GPU,
     float *in_GPU,
     float *dust_GPU
     )
 {
-    float *p_param = seq_GPU + blockIdx.x * PARAM_SIZE;
+    float *p_param = seq_const + blockIdx.x * PARAM_SIZE;
     float *p_dust = dust_GPU + blockIdx.x;
 
     dust_kernel(p_param, in_GPU, p_dust);

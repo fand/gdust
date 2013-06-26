@@ -3,7 +3,7 @@
 # doc2: http://netbsd.gw.com/cgi-bin/man-cgi?make+1+NetBSD-current
 
 CXX      = nvcc
-CFLAGS   = -Iinclude -O3
+CFLAGS   = -Iinclude -O3 -use_fast_math
 #-L../opt/boost/lib -I../opt/boost/include
 
 LIBS     = -lcutil -lcurand -lgsl -lgslcblas

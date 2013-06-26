@@ -98,7 +98,7 @@ float Integrator::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
     float *seq, *dust, *seq_GPU, *dust_GPU;
     seq = (float*)malloc(seq_size);
     dust = (float*)malloc(dust_size);
-    CUDA_SAFE_CALL(cudaMalloc((void**)&seq_GPU, seq_size));
+    // CUDA_SAFE_CALL(cudaMalloc((void**)&seq_GPU, seq_size));
     CUDA_SAFE_CALL(cudaMalloc((void**)&dust_GPU, dust_size));
 
     for( int i = 0; i < n; i++ )
@@ -114,14 +114,19 @@ float Integrator::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
         seq[j+4] = y.observation;
         seq[j+5] = y.stddev;
     }
-    
-    CUDA_SAFE_CALL( cudaMemcpy( seq_GPU,
-                                seq,
-                                seq_size,
-                                cudaMemcpyHostToDevice ) );
+
+    copyToConst(seq, seq_size);
+    // cudaMemcpyToSymbol(seq_const, seq, seq_size, 0, cudaMemcpyHostToDevice);
+    // cudaGetSymbolAddress((void**)&seq_GPU, seq_const);
+
+    // CUDA_SAFE_CALL( cudaMemcpy( seq_GPU,
+    //                             seq,
+    //                             seq_size,
+    //                             cudaMemcpyHostToDevice ) );
 
     // call kernel
-    distance_kernel<<< n, TPB >>>(seq_GPU, this->in_GPU, dust_GPU);
+//    distance_kernel<<< n, TPB >>>(seq_const, this->in_GPU, dust_GPU);
+    distance_kernel<<< n, TPB >>>(this->in_GPU, dust_GPU);    
 
     CUDA_SAFE_CALL( cudaMemcpy( dust,
                                 dust_GPU,
@@ -135,7 +140,7 @@ float Integrator::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
     }
 
 
-    CUDA_SAFE_CALL( cudaFree( seq_GPU ) );
+//    CUDA_SAFE_CALL( cudaFree( seq_GPU ) );
     CUDA_SAFE_CALL( cudaFree( dust_GPU ) );
     
     free(seq);
