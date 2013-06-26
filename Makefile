@@ -3,10 +3,11 @@
 # doc2: http://netbsd.gw.com/cgi-bin/man-cgi?make+1+NetBSD-current
 
 CXX      = nvcc
-CFLAGS   = -Iinclude
+CFLAGS   = -Iinclude -O3
+#-L../opt/boost/lib -I../opt/boost/include
 
 LIBS     = -lcutil -lcurand -lgsl -lgslcblas
-#-L../opt/boost/lib -I../opt/boost/include
+
 APPNAME  = gdustdtw
 
 #####################################################################

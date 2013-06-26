@@ -1,4 +1,5 @@
 #include "integrator.hpp"
+#include "randomvariable.hpp"
 #include "kernel.hpp"
 
 #include <math.h>
@@ -21,8 +22,8 @@
 #define PARAM_SIZE 6
 
 #define INTEGRATION_SAMPLES 49152
-#define TPB 512
-#define BPG 96
+#define TPB 256
+#define BPG 192
 
 
 Integrator::~Integrator()
@@ -87,70 +88,59 @@ Integrator::Integrator()
 
 
 
-float Integrator::integrate( int fnum, float *param )
+
+float Integrator::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
 {
-    float range_min = INTEG_RANGE_MIN;    // -16
-    float range_max = INTEG_RANGE_MAX;    // +16
-
-
-    int calls = INTEGRATION_SAMPLES;    // 49152
-
-
-    CUDA_SAFE_CALL(
-        cudaMemcpy( this->param_GPU,
-                    param,
-                    sizeof(float) * PARAM_SIZE,    // param size
-                    cudaMemcpyHostToDevice ) );
+    size_t seq_size = sizeof(float) * n * PARAM_SIZE;
+    size_t dust_size = sizeof(float) * n;
     
-    // exec!
-    dim3 blocks( BPG, 1, 1 );
-    dim3 threads( TPB, 1, 1 );
+    // dispatch seq to memory
+    float *seq, *dust, *seq_GPU, *dust_GPU;
+    seq = (float*)malloc(seq_size);
+    dust = (float*)malloc(dust_size);
+    CUDA_SAFE_CALL(cudaMalloc((void**)&seq_GPU, seq_size));
+    CUDA_SAFE_CALL(cudaMalloc((void**)&dust_GPU, dust_size));
 
-    integrate_kernel<<< blocks, threads >>>( this->param_GPU,
-                                             fnum,
-                                             this->in_GPU,
-                                             this->out_GPU,
-                                             range_min,
-                                             range_max );
+    for( int i = 0; i < n; i++ )
+    {
+        RandomVariable x = ts1.at(i);
+        RandomVariable y = ts2.at(i);
+        
+        int j = PARAM_SIZE * i;
+        seq[j] = (float)x.distribution;
+        seq[j+1] = x.observation;
+        seq[j+2] = x.stddev;
+        seq[j+3] = (float)y.distribution;
+        seq[j+4] = y.observation;
+        seq[j+5] = y.stddev;
+    }
+    
+    CUDA_SAFE_CALL( cudaMemcpy( seq_GPU,
+                                seq,
+                                seq_size,
+                                cudaMemcpyHostToDevice ) );
 
-    reduce<float>(calls, TPB, BPG, this->out_GPU, this->sum_GPU);
+    // call kernel
+    distance_kernel<<< n, TPB >>>(seq_GPU, this->in_GPU, dust_GPU);
 
-    CUDA_SAFE_CALL( cudaMemcpy( this->sum,
-                                this->sum_GPU,
-                                sizeof(float) * BPG,
+    CUDA_SAFE_CALL( cudaMemcpy( dust,
+                                dust_GPU,
+                                dust_size,
                                 cudaMemcpyDeviceToHost ) );
 
-    float tes = 0;
-    for (int i=0; i < BPG; i++) {
-        tes += sum[i];
+
+    float dist = 0;
+    for (int i=0; i < n; i++) {
+        dist += dust[i];
     }
 
-    return (tes / calls) * (range_max - range_min);
+
+    CUDA_SAFE_CALL( cudaFree( seq_GPU ) );
+    CUDA_SAFE_CALL( cudaFree( dust_GPU ) );
+    
+    free(seq);
+    free(dust);
+    
+    return sqrt(dist);
 }
 
-
-
-float Integrator::phi( float *param )
-{
-    CUDA_SAFE_CALL(
-        cudaMemcpy( this->param_GPU,
-                    param,
-                    sizeof(float) * PARAM_SIZE,    // param size
-                    cudaMemcpyHostToDevice ) );
-
-    // exec!
-    dim3 blocks( BPG, 1, 1 );
-    dim3 threads( TPB, 1, 1 );
-
-    phi_kernel<<< blocks, threads >>>( param_GPU,
-                                       this->in_GPU,
-                                       this->answer_GPU );
-
-
-    float answer = 0;
-    CUDA_SAFE_CALL( cudaMemcpy( &answer,
-                                this->answer_GPU,
-                                sizeof(float),
-                                cudaMemcpyDeviceToHost ) );
-    return answer;
-}

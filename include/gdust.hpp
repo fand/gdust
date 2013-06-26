@@ -33,7 +33,6 @@ class GDUST
 public:
     ~GDUST();
     GDUST( TimeSeriesCollection &collection, const char *lookUpTablesPath = NULL );
-    thrust::host_vector< int > rangeQuery( TimeSeries ts, float threshold );
 
     bool lookupTablesAvailable;
     float lookuptables[ 3 ][ STDDEV_STEPS + 1 ][ STDDEV_STEPS + 1 ][ DISTANCE_STEPS + 1 ];
@@ -43,18 +42,10 @@ public:
     
     void init();
 
-    float dust( RandomVariable &x, RandomVariable &y);
-    float phi( RandomVariable &x, RandomVariable &y);
-    
-    void buildFDustTables( const char *path );
-    void readLookUpTables( const char *lookUpTablesPath );
     TimeSeriesCollection collection;
 
 
 private:
     Integrator *integ;
-    void calcCost( TimeSeries &ts1, TimeSeries &ts2, double *table_d, double *table_g, int len1, int len2 );
-    void calcGamma( double *table_d, double *table_g, int len1, int len2 );
-    double calcSum( double *table_d, double *table_g, int len1, int len2 );
 };
 

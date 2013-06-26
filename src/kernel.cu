@@ -10,6 +10,7 @@
 #define INTEG_RANGE_MAX 16
 #define INTEG_RANGE_MIN -16
 
+#define PARAM_SIZE 6
 #define PARAM_X_DISTRIBUTION 0
 #define PARAM_X_OBSERVATION 1
 #define PARAM_X_STDDEV 2
@@ -252,32 +253,21 @@ f4 ( float k, float *params )
 
 
 
-__global__ void integrate_kernel(
-    void *params,
-    int fnum,
-    float *input_array,
-    float *output_array,
-    float range_min,
-    float range_max )
+__global__ void distance_kernel(
+    float *seq_GPU,
+    float *in_GPU,
+    float *dust_GPU
+    )
 {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    // random input "input_array[idx]" is (0, 1]
-    // so we need to apply them to the range of integration.
-     float input = ( input_array[ idx ] * (range_max - range_min) ) + range_min;
-    
-    if (fnum == 1) output_array[ idx ] = f1( input, (float *)params );
-    if (fnum == 2) output_array[ idx ] = f2( input, (float *)params );
-    if (fnum == 3) output_array[ idx ] = f3( input, (float *)params );
-    if (fnum == 4) output_array[ idx ] = f4( input, (float *)params );
+    float *p_param = seq_GPU + blockIdx.x * PARAM_SIZE;
+    float *p_dust = dust_GPU + blockIdx.x;
+
+    dust_kernel(p_param, in_GPU, p_dust);
 }
 
 
-
-
-
-__global__ void phi_kernel(
-    void *params,
+__device__ void dust_kernel(
+    float *params,
     float *in,
     float *answer_GPU)
 {
@@ -287,54 +277,57 @@ __global__ void phi_kernel(
     float o2 = 0.0f;
     float o3 = 0.0f;
 
-    __shared__ float sdata[TPB];
+    __shared__ float sdata1[TPB];
+    __shared__ float sdata2[TPB];
+    __shared__ float sdata3[TPB];
 
     // MAP PHASE
     for (int i = threadIdx.x; i < INTEGRATION_SAMPLES; i += blockDim.x) {
         input = in[i] * RANGE_WIDTH + RANGE_MIN;
-        o1 += f1( input, (float *)params );
-        o2 += f2( input, (float *)params );
-        o3 += f3( input, (float *)params );
+        o1 += f1( input, params );
+        o2 += f2( input, params );
+        o3 += f3( input, params );
     }
     
     
     // REDUCE PHASE
-    float s1, s2, s3;
-    
-    sdata[threadIdx.x] = o1;
-    reduceBlock(sdata, &s1, TPB);
+    sdata1[threadIdx.x] = o1;
+    sdata2[threadIdx.x] = o2;
+    sdata3[threadIdx.x] = o3;
+    reduceBlock<TPB>(sdata1, sdata2, sdata3);
 
-    sdata[threadIdx.x] = o2;
-    reduceBlock(sdata, &s2, TPB);
-
-    sdata[threadIdx.x] = o3;
-    reduceBlock(sdata, &s3, TPB);
 
     float r = (float)RANGE_WIDTH / INTEGRATION_SAMPLES;
 
     if (threadIdx.x == 0) {
-        *answer_GPU = s3 / (s1 * s2 * r);
+        float d = -log10(sdata3[0] / (sdata1[0] * sdata2[0] * r));
+        if (d < 0) d =0.0f;
+        *answer_GPU = d;
     }
 }
 
 
 
+template<unsigned int blockSize>
 __device__ void
-reduceBlock(float *sdata, float *odata, unsigned int n){
-
+reduceBlock(float *sdata1, float *sdata2, float *sdata3){
     // make sure all threads are ready
     __syncthreads();
     
     unsigned int tid = threadIdx.x;
-    float mySum = sdata[tid];
-    unsigned int blockSize = blockDim.x;
+    float mySum1 = sdata1[tid];
+    float mySum2 = sdata2[tid];
+    float mySum3 = sdata3[tid];    
+    // unsigned int blockSize = blockDim.x;
     
     // do reduction in shared mem
     if (blockSize >= 512)
     {
         if (tid < 256)
         {
-            sdata[tid] = mySum = mySum + sdata[tid + 256];
+            sdata1[tid] = mySum1 = mySum1 + sdata1[tid + 256];
+            sdata2[tid] = mySum2 = mySum2 + sdata2[tid + 256];
+            sdata3[tid] = mySum3 = mySum3 + sdata3[tid + 256];            
         }
 
         __syncthreads();
@@ -344,7 +337,9 @@ reduceBlock(float *sdata, float *odata, unsigned int n){
     {
         if (tid < 128)
         {
-            sdata[tid] = mySum = mySum + sdata[tid + 128];
+            sdata1[tid] = mySum1 = mySum1 + sdata1[tid + 128];
+            sdata2[tid] = mySum2 = mySum2 + sdata2[tid + 128];
+            sdata3[tid] = mySum3 = mySum3 + sdata3[tid + 128];            
         }
 
         __syncthreads();
@@ -354,7 +349,9 @@ reduceBlock(float *sdata, float *odata, unsigned int n){
     {
         if (tid <  64)
         {
-            sdata[tid] = mySum = mySum + sdata[tid +  64];
+            sdata1[tid] = mySum1 = mySum1 + sdata1[tid + 64];
+            sdata2[tid] = mySum2 = mySum2 + sdata2[tid + 64];
+            sdata3[tid] = mySum3 = mySum3 + sdata3[tid + 64];            
         }
 
         __syncthreads();
@@ -365,44 +362,51 @@ reduceBlock(float *sdata, float *odata, unsigned int n){
         // now that we are using warp-synchronous programming (below)
         // we need to declare our shared memory volatile so that the compiler
         // doesn't reorder stores to it and induce incorrect behavior.
-        volatile float *smem = sdata;
+        volatile float *smem1 = sdata1;
+        volatile float *smem2 = sdata2;
+        volatile float *smem3 = sdata3;
 
         if (blockSize >=  64)
         {
-            smem[tid] = mySum = mySum + smem[tid + 32];
+            smem1[tid] = mySum1 = mySum1 + smem1[tid + 32];
+            smem2[tid] = mySum2 = mySum2 + smem2[tid + 32];
+            smem3[tid] = mySum3 = mySum3 + smem3[tid + 32];
         }
 
         if (blockSize >=  32)
         {
-            smem[tid] = mySum = mySum + smem[tid + 16];
+            smem1[tid] = mySum1 = mySum1 + smem1[tid + 16];
+            smem2[tid] = mySum2 = mySum2 + smem2[tid + 16];
+            smem3[tid] = mySum3 = mySum3 + smem3[tid + 16];
         }
 
         if (blockSize >=  16)
         {
-            smem[tid] = mySum = mySum + smem[tid +  8];
+            smem1[tid] = mySum1 = mySum1 + smem1[tid + 8];
+            smem2[tid] = mySum2 = mySum2 + smem2[tid + 8];
+            smem3[tid] = mySum3 = mySum3 + smem3[tid + 8];
         }
 
         if (blockSize >=   8)
         {
-            smem[tid] = mySum = mySum + smem[tid +  4];
+            smem1[tid] = mySum1 = mySum1 + smem1[tid + 4];
+            smem2[tid] = mySum2 = mySum2 + smem2[tid + 4];
+            smem3[tid] = mySum3 = mySum3 + smem3[tid + 4];
         }
 
         if (blockSize >=   4)
         {
-            smem[tid] = mySum = mySum + smem[tid +  2];
+            smem1[tid] = mySum1 = mySum1 + smem1[tid + 2];
+            smem2[tid] = mySum2 = mySum2 + smem2[tid + 2];
+            smem3[tid] = mySum3 = mySum3 + smem3[tid + 2];
         }
 
         if (blockSize >=   2)
         {
-            smem[tid] = mySum = mySum + smem[tid +  1];
+            smem1[tid] = mySum1 = mySum1 + smem1[tid + 1];
+            smem2[tid] = mySum2 = mySum2 + smem2[tid + 1];
+            smem3[tid] = mySum3 = mySum3 + smem3[tid + 1];
         }
     }
- 
-    // write result for this block to global mem
-    if (threadIdx.x == 0) {
-        *odata = sdata[0];
-    }
-    
-    __syncthreads();
 }
 

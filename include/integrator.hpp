@@ -1,6 +1,7 @@
 #pragma once
 
 #include <curand.h>
+#include "timeseries.hpp"
 
 
 class Integrator
@@ -9,8 +10,7 @@ public:
     ~Integrator();
     Integrator();    
 
-    float integrate( int fnum, float *param );
-    float phi( float *param );
+    float distance( TimeSeries &ts1, TimeSeries &ts2, int n );
     
 private:
     float *in, *out, *sum;

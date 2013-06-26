@@ -30,12 +30,8 @@ OPT o;
 
 int main( int argc, char **argv );
 void initOpt( int argc, char **argv );
-void checkDtw( int argc, char **argv );
 void checkDistance( int argc, char **argv );
-void checkDistribution( int argc, char **argv );
-void checkStddev( int argc, char **argv );
 void cleanUp();
-void generateFDustTables( int argc, char **argv );
 
 
 
@@ -46,65 +42,9 @@ int main( int argc, char **argv )
     std::cout.precision( 4 );
     std::cerr.precision( 4 );
     
-//    checkDtw( argc, argv );
     checkDistance( argc, argv );
-//    checkDistribution( argc, argv );
-//    checkStddev( argc, argv );
     
     cleanUp();
-}
-
-
-void checkDtw( int argc, char **argv )
-{
-
-    TimeSeriesCollection db( argv[1], 2, -1 ); // distribution is normal
-    
-    std::cout << "input file: " << argv[1] << std::endl;
-    
-//    db.printSeqs();
-    
-    
-    // MUST DO THIS FIRST!!! (for X-ray data)
-    db.normalize();
-    
-    
-    DUST dust( db );
-    GDUST gdust( db );
-    Euclidean eucl( db );
-    
-    Watch watch;
-    
-    std::cout << "eval_loop " << db.sequences.size() << " start" << std::endl;
-    
-    
-    for ( int i = 0; i < db.sequences.size(); i++ )
-    {
-        TimeSeries &ts1 = db.sequences[i];
-        for ( int j = i + 1; j < db.sequences.size(); j++ )
-        {
-            TimeSeries &ts2 = db.sequences[j];
-            
-            
-            watch.start();
-            double gdustdtw = gdust.dtw( ts1, ts2 );
-            watch.stop();
-            std::cout << i << "-" << j << " gdustdtw :" << gdustdtw 
-                      << " time: " << watch.getInterval() << std::endl;
-            
-            // watch.start();
-            // double dustdtw = dust.dtw( ts1, ts2 );
-            // watch.stop();
-            // std::cout << i << "-" << j << " dustdtw :" << dustdtw 
-            //           << " time: " << watch.getInterval() << std::endl;
-            
-            // watch.start();
-            // double eucldtw = eucl.dtw( ts1, ts2 );
-            // watch.stop();
-            // std::cout << i << "-" << j << " eucldtw :" << eucldtw
-            //           << " time: " << watch.getInterval() << std::endl;
-        }
-    }
 }
 
 
@@ -141,16 +81,16 @@ void checkDistance( int argc, char **argv )
             std::cout << "ts1 : " << ts2.length() << std::endl;
             
             watch.start();
-            double gdustdist = gdust.distance( ts1, ts2 );
+            double gdustdist = gdust.distance( ts1, ts2, -1 );
             watch.stop();
             std::cout << i << "-" << j << " gdustdist :" << gdustdist
                       << " time: " << watch.getInterval() << std::endl;
             
-            watch.start();
-            double dustdist = dust.distance( ts1, ts2 );
-            watch.stop();
-            std::cout << i << "-" << j << " dustdist :" << dustdist
-                      << " time: " << watch.getInterval() << std::endl;
+            // watch.start();
+            // double dustdist = dust.distance( ts1, ts2 );
+            // watch.stop();
+            // std::cout << i << "-" << j << " dustdist :" << dustdist
+            //           << " time: " << watch.getInterval() << std::endl;
             
             // watch.start();
             // double eucldist = eucl.distance( ts1, ts2 );
@@ -162,60 +102,6 @@ void checkDistance( int argc, char **argv )
 }
 
 
-void checkDistribution( int argc, char **argv )
-{
-    TimeSeriesCollection db;
-    DUST dust(db);
-    GDUST gdust(db);
-
-    for( double distance = 0.0; distance <= 3.0; distance += 0.2 )
-    {
-        // uniform
-        // RandomVariable x = RandomVariable( RANDVAR_UNIFORM, 0, 0, 0.2 );
-        // RandomVariable y = RandomVariable( RANDVAR_UNIFORM, distance, distance, 0.8 );
-        // double d = dust.dust( x, y );
-        // double gd = gdust.dust( x, y );
-        // std::cerr << "dust:" << d << " gdust:" << gd << std::endl;
-
-            
-        // normal
-        RandomVariable x = RandomVariable( RANDVAR_NORMAL, 0, 0, 0.2 );
-        RandomVariable y = RandomVariable( RANDVAR_NORMAL, distance, distance, 0.8 );
-        double d = dust.dust( x, y );
-        double gd = gdust.dust( x, y );
-//            std::cerr << "distribution:" << RANDVAR_NORMAL
-//                      << " stddevs:" << 0.2 << " "<< 0.8 << std::endl;
-        std::cerr << "dust:" << d << " gdust:" << gd << std::endl;
-    }
-}
-
-
-void checkStddev( int argc, char **argv )
-{
-    TimeSeriesCollection db;
-    DUST dust(db);
-    GDUST gdust(db);
-    
-    for( double stddev = 0.0; stddev <= 3.0; stddev += 0.2 )
-    {
-        // uniform
-        // RandomVariable x = RandomVariable( RANDVAR_UNIFORM, 0, 0, 0.2 );
-        // RandomVariable y = RandomVariable( RANDVAR_UNIFORM, distance, distance, 0.8 );
-        // double d = dust.dust( x, y );
-        // double gd = gdust.dust( x, y );
-        // std::cerr << "dust:" << d << " gdust:" << gd << std::endl;
-        
-        
-        // normal
-        RandomVariable x = RandomVariable( RANDVAR_NORMAL, 0, 0, 0.2 );
-        RandomVariable y = RandomVariable( RANDVAR_NORMAL, 20, 20, stddev );
-        double d = dust.dust( x, y );
-        double gd = gdust.dust( x, y );
-//            std::cerr << "distribution:" << RANDVAR_NORMAL
-//                      << " stddevs:" << 0.2 << " "<< 0.8 << std::endl;
-        std::cerr << "dust:" << d << " gdust:" << gd << std::endl;
-    }
-}
 
 
 
@@ -271,10 +157,4 @@ void  initOpt( int argc, char **argv )
     }
 }
 
-
-void generateFDustTables( int argc, char **argv ){
-    TimeSeriesCollection db;
-    GDUST dust( db );
-    dust.buildFDustTables(o.wfile);
-}
 
