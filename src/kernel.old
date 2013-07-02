@@ -19,6 +19,16 @@
 #define PARAM_Y_STDDEV 5
 
 
+
+// __constant__ __device__ float seq_const[6*1024];
+
+
+// void copyToConst(void* src, size_t size)
+// {
+//     cudaMemcpyToSymbol(seq_const, src, size, 0, cudaMemcpyHostToDevice);
+// }
+
+
 __device__ float pdf_uniform(float lower, float upper, float x)
 {
     return ((lower <= x) && (x <= upper)) ? 1.0f / (upper - lower) : 0.0f;
@@ -32,17 +42,17 @@ __device__ float pdf_normal( float mean, float sd, float x )
     float result = 0.0f;
 
     float exponent = x - mean;
-    exponent *= ((-1.0f) * exponent);
-    exponent /= (2.0f * sd * sd);
+    exponent *= ( (-1) * exponent );
+    exponent /= ( 2 * sd * sd );
 
-    result = __expf(exponent);
-    result /= sd * sqrt(2.0f * PI_FLOAT);
+    result = __expf( exponent );
+    result /= sd * sqrt( 2 * PI_FLOAT );
 
     return result;
 }
 
 
-template<int distribution>
+template <int distribution>
 __device__ float
 myPDF(float mean, float stddev, float v)
 {
@@ -91,19 +101,18 @@ f3(float z, float x, float x_stddev, float y, float y_stddev)
 }
 
 
-template<int x_dist, int y_dist> __device__ float3
-map(float x, float x_stddev, float y, float y_stddev, float *in)
+template<int x_dist, int y_dist> __device__ void
+map(float x, float x_stddev, float y, float y_stddev, float *in, float3 *o)
 {
-    float3 o = make_float3(0.0f, 0.0f, 0.0f);
     for (int i = threadIdx.x; i < INTEGRATION_SAMPLES; i += blockDim.x) {
         float input = __fmaf_rn(in[i], RANGE_WIDTH, RANGE_MIN);
         float u = pdf_uniform(-RANGE_VALUE, RANGE_VALUE, input);
-        o.x = __fmaf_rn(u, f12<x_dist>(input, x, x_stddev), o.x);
-        o.y = __fmaf_rn(u, f12<y_dist>(input, y, y_stddev), o.y);
-        o.z = __fmaf_rn(u * u, f3<x_dist, y_dist>(input, x - 0.1f, x_stddev, y + 0.1f, y_stddev), o.z);
+        o->x = __fmaf_rn(u, f12<x_dist>(input, x, x_stddev), o->x);
+        o->y = __fmaf_rn(u, f12<y_dist>(input, y, y_stddev), o->y);
+        o->z = __fmaf_rn(u * u, f3<x_dist, y_dist>(input, x - 0.1f, x_stddev, y + 0.1f, y_stddev), o->z);
     }
-    return o;
 }
+
 
 
 __global__ void distance_kernel(
@@ -113,24 +122,24 @@ __global__ void distance_kernel(
     int *xy_dists
 )
 {
-    float3 mySum;
+    int xy_dist = xy_dists[blockIdx.x];
+    float3 mySum = make_float3(0.0f, 0.0f, 0.0f);
 
     // MAP PHASE
     {
-        int xy_dist = xy_dists[blockIdx.x];
         float4 params = seq_GPU[blockIdx.x];
         switch(xy_dist) {
         case 0x5:
-            mySum = map<RANDVAR_UNIFORM, RANDVAR_UNIFORM>(params.x, params.y, params.z, params.w, in_GPU);
+            map<RANDVAR_UNIFORM, RANDVAR_UNIFORM>(params.x, params.y, params.z, params.w, in_GPU, &mySum);
             break;
         case 0x6:
-            mySum = map<RANDVAR_UNIFORM, RANDVAR_NORMAL>(params.x, params.y, params.z, params.w, in_GPU);
+            map<RANDVAR_UNIFORM, RANDVAR_NORMAL>(params.x, params.y, params.z, params.w, in_GPU, &mySum);
             break;
         case 0x9:
-            mySum = map<RANDVAR_NORMAL, RANDVAR_UNIFORM>(params.x, params.y, params.z, params.w, in_GPU);
+            map<RANDVAR_NORMAL, RANDVAR_UNIFORM>(params.x, params.y, params.z, params.w, in_GPU, &mySum);
             break;
         case 0xa:
-            mySum = map<RANDVAR_NORMAL, RANDVAR_NORMAL>(params.x, params.y, params.z, params.w, in_GPU);
+            map<RANDVAR_NORMAL, RANDVAR_NORMAL>(params.x, params.y, params.z, params.w, in_GPU, &mySum);
             break;
         }
     }

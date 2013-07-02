@@ -5,7 +5,6 @@
 #include <math.h>
 #include <fstream>
 
-#include <cutil.h>
 #include <curand.h>
 
 #include <iostream>
@@ -28,21 +27,21 @@
 
 Integrator::~Integrator()
 {
-    CUDA_SAFE_CALL( cudaFree( this->in_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->out_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->param_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->sum_GPU ) );
-    
+     cudaFree( this->in_GPU ) ;
+     cudaFree( this->out_GPU );
+     cudaFree( this->param_GPU ) ;
+     cudaFree( this->sum_GPU ) ;
 
-    CUDA_SAFE_CALL( cudaFree( this->out1_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->out2_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->out3_GPU ) );    
-    CUDA_SAFE_CALL( cudaFree( this->sum1_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->sum2_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->sum3_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->answer_GPU ) );
 
-    
+     cudaFree( this->out1_GPU ) ;
+     cudaFree( this->out2_GPU ) ;
+     cudaFree( this->out3_GPU ) ;
+     cudaFree( this->sum1_GPU ) ;
+     cudaFree( this->sum2_GPU ) ;
+     cudaFree( this->sum3_GPU ) ;
+     cudaFree( this->answer_GPU );
+
+
     free(this->in);
     free(this->out);
     free(this->sum);
@@ -57,27 +56,27 @@ Integrator::~Integrator()
 Integrator::Integrator()
 {
     size_t size = sizeof(float) * INTEGRATION_SAMPLES;
-    
+
     this->in = (float *)malloc(size);
     this->out = (float *)malloc(size);
     this->sum = (float *)malloc(sizeof(float) * BPG);
     this->sum1 = (float *)malloc(sizeof(float));
     this->sum2 = (float *)malloc(sizeof(float));
-    this->sum3 = (float *)malloc(sizeof(float));    
+    this->sum3 = (float *)malloc(sizeof(float));
 
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->in_GPU), size ) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->out_GPU), size ) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->param_GPU), sizeof(float) * PARAM_SIZE ) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->sum_GPU), sizeof(float) * BPG ) );
-    
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->out1_GPU), size) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->out2_GPU), size) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->out3_GPU), size) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->sum1_GPU), sizeof(float) ) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->sum2_GPU), sizeof(float) ) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->sum3_GPU), sizeof(float) ) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->answer_GPU), sizeof(float) ) );
-    
+    cudaMalloc( (void**)&(this->in_GPU), size ) ;
+    cudaMalloc( (void**)&(this->out_GPU), size ) ;
+    cudaMalloc( (void**)&(this->param_GPU), sizeof(float) * PARAM_SIZE ) ;
+    cudaMalloc( (void**)&(this->sum_GPU), sizeof(float) * BPG ) ;
+
+    cudaMalloc( (void**)&(this->out1_GPU), size) ;
+    cudaMalloc( (void**)&(this->out2_GPU), size) ;
+    cudaMalloc( (void**)&(this->out3_GPU), size) ;
+    cudaMalloc( (void**)&(this->sum1_GPU), sizeof(float) ) ;
+    cudaMalloc( (void**)&(this->sum2_GPU), sizeof(float) ) ;
+    cudaMalloc( (void**)&(this->sum3_GPU), sizeof(float) ) ;
+    cudaMalloc( (void**)&(this->answer_GPU), sizeof(float) ) ;
+
     this->gen = new curandGenerator_t();
     curandCreateGenerator( this->gen, CURAND_RNG_PSEUDO_MTGP32 );
     curandSetPseudoRandomGeneratorSeed( *(this->gen), 1234ULL );
@@ -93,59 +92,48 @@ float Integrator::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
 {
     size_t seq_size = sizeof(float) * n * PARAM_SIZE;
     size_t dust_size = sizeof(float) * n;
-    
+
     // dispatch seq to memory
-    float *seq, *dust, *seq_GPU, *dust_GPU;
-    seq = (float*)malloc(seq_size);
+    int *h_xy_dist, *d_xy_dist;
+    float *dust, *dust_GPU;
+    float4 *seq, *seq_GPU;
+    seq = (float4 *) malloc(sizeof(float4) * n);
     dust = (float*)malloc(dust_size);
-    // CUDA_SAFE_CALL(cudaMalloc((void**)&seq_GPU, seq_size));
-    CUDA_SAFE_CALL(cudaMalloc((void**)&dust_GPU, dust_size));
+    h_xy_dist = (int *) malloc(sizeof(int) * n);
+    cudaMalloc((void **) &d_xy_dist, sizeof(int) * n);
+    cudaMalloc((void **) &seq_GPU, sizeof(float4) * n);
+    cudaMalloc((void **) &dust_GPU, dust_size);
 
     for( int i = 0; i < n; i++ )
     {
         RandomVariable x = ts1.at(i);
         RandomVariable y = ts2.at(i);
-        
-        int j = PARAM_SIZE * i;
-        seq[j] = (float)x.distribution;
-        seq[j+1] = x.observation;
-        seq[j+2] = x.stddev;
-        seq[j+3] = (float)y.distribution;
-        seq[j+4] = y.observation;
-        seq[j+5] = y.stddev;
+
+        h_xy_dist[i] = (x.distribution << 2) + y.distribution;
+        seq[i] = make_float4(x.observation, x.stddev, y.observation, y.stddev);
     }
 
-    copyToConst(seq, seq_size);
-    // cudaMemcpyToSymbol(seq_const, seq, seq_size, 0, cudaMemcpyHostToDevice);
-    // cudaGetSymbolAddress((void**)&seq_GPU, seq_const);
-
-    // CUDA_SAFE_CALL( cudaMemcpy( seq_GPU,
-    //                             seq,
-    //                             seq_size,
-    //                             cudaMemcpyHostToDevice ) );
+    cudaMemcpy(d_xy_dist, h_xy_dist, sizeof(int) * n, cudaMemcpyHostToDevice);
+    cudaMemcpy(seq_GPU, seq, sizeof(float4) * n, cudaMemcpyHostToDevice);
 
     // call kernel
-//    distance_kernel<<< n, TPB >>>(seq_const, this->in_GPU, dust_GPU);
-    distance_kernel<<< n, TPB >>>(this->in_GPU, dust_GPU);    
+    distance_kernel<<< n, TPB >>>(this->in_GPU, dust_GPU, seq_GPU, d_xy_dist);
 
-    CUDA_SAFE_CALL( cudaMemcpy( dust,
-                                dust_GPU,
-                                dust_size,
-                                cudaMemcpyDeviceToHost ) );
-
+    cudaMemcpy(dust, dust_GPU, dust_size, cudaMemcpyDeviceToHost);
 
     float dist = 0;
     for (int i=0; i < n; i++) {
         dist += dust[i];
     }
 
+    cudaFree( seq_GPU );
+    cudaFree( dust_GPU );
+    cudaFree(d_xy_dist);
 
-//    CUDA_SAFE_CALL( cudaFree( seq_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( dust_GPU ) );
-    
+    free(h_xy_dist);
     free(seq);
     free(dust);
-    
+
     return sqrt(dist);
 }
 

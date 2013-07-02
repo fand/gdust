@@ -32,11 +32,12 @@ __device__ float f4 ( float k, float *params );
 
 //__global__ void distance_kernel(float *seq_GPU, float *in_GPU, float *dust_GPU);
 void copyToConst(void* src, size_t size);
-__global__ void distance_kernel(float *in_GPU, float *dust_GPU);
+__global__ void distance_kernel(float *in_GPU, float *dust_GPU, float4 *seq_GPU, int *xy_dists);
 __device__ void dust_kernel(float *params, float *in, float *answer_GPU);
 template<unsigned int blockSize> __device__ void reduceBlock(float *sdata1,
                                                              float *sdata2,
-                                                             float *sdata3);
+                                                             float *sdata3,
+                                                             float mySum1, float mySum2, float mySum3);
 
 
 
