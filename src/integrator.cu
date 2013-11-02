@@ -20,10 +20,11 @@
 #define INTEG_RANGE_MIN -16
 
 #define PARAM_SIZE 6
-
 #define INTEGRATION_SAMPLES 49152
+
 #define TPB 256
 #define BPG 192
+
 
 
 Integrator::~Integrator()

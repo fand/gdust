@@ -271,9 +271,9 @@ double DUST::phi( RandomVariable &x, RandomVariable &y )
 //        exit(0);
     }
 
-    // assert( NOTNANINF(int3) );
-    // return int3;
-    return integrate( f4, (void *)params );
+    assert( NOTNANINF(int3) );
+    return int3;
+    // return integrate( f4, (void *)params );
 }
 
 
@@ -343,7 +343,8 @@ double DUST::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
             exit(0);
         }
         
-        dist += pow( dust( a, b ), 2 );
+        //dist += pow( dust( a, b ), 2 );
+        dist += pow( du, 2 );        
     }
 
     dist = sqrt( dist );

@@ -12,8 +12,9 @@
 
 #include <map>
 
+#define INTEGRATION_SAMPLES 49152
 
-#define INTEGRATION_SAMPLES 50000
+//50000
 
 #define STDDEV_STEP 0.2
 #define STDDEV_BEGIN 0.0

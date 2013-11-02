@@ -33,16 +33,21 @@ void initOpt( int argc, char **argv );
 void checkDistance( int argc, char **argv );
 void cleanUp();
 
-
-
+void exp1( int argc, char **argv );
+void exp2( int argc, char **argv );
+void exp3( int argc, char **argv );
 
 int main( int argc, char **argv )
 {
     initOpt( argc, argv );
     std::cout.precision( 4 );
     std::cerr.precision( 4 );
+
+    std::cout << "samples: " << INTEGRATION_SAMPLES << std::endl;
     
-    checkDistance( argc, argv );
+    // checkDistance( argc, argv );
+
+    exp2( argc, argv );
     
     cleanUp();
 }
@@ -86,11 +91,11 @@ void checkDistance( int argc, char **argv )
             std::cout << i << "-" << j << " gdustdist :" << gdustdist
                       << " time: " << watch.getInterval() << std::endl;
             
-            // watch.start();
-            // double dustdist = dust.distance( ts1, ts2 );
-            // watch.stop();
-            // std::cout << i << "-" << j << " dustdist :" << dustdist
-            //           << " time: " << watch.getInterval() << std::endl;
+            watch.start();
+            double dustdist = dust.distance( ts1, ts2 );
+            watch.stop();
+            std::cout << i << "-" << j << " dustdist :" << dustdist
+                      << " time: " << watch.getInterval() << std::endl;
             
             // watch.start();
             // double eucldist = eucl.distance( ts1, ts2 );
@@ -102,7 +107,126 @@ void checkDistance( int argc, char **argv )
 }
 
 
+void exp1( int argc, char **argv )
+{
+    for (int t = 0; t < 10; t++) {
+        char filename[50];
+        snprintf(filename, 50, "%s_error_%d", argv[1], (t+1));
+        std::cout << filename << std::endl;
+        
+        TimeSeriesCollection db( filename, 2, -1 ); // distribution is normal
+        db.normalize();
+    
+        DUST dust( db );
+        GDUST gdust( db );
+    
+        
+        for (int i = 0; i < 1; i++) {
+            TimeSeries &ts1 = db.sequences[i];
 
+            double min_gpu = 100000000;
+            double min_gpu_i, min_gpu_j;
+            double min_cpu = 100000000;
+            double min_cpu_i, min_cpu_j;
+
+            // for (int j = 0; j < db.sequences.size(); j++) {
+            for (int j = 0; j < 10; j++) {
+                if (i==j) {continue;}
+                TimeSeries &ts2 = db.sequences[j];
+
+                double gdustdist = gdust.distance( ts1, ts2, -1 );
+                double dustdist = dust.distance( ts1, ts2, -1 );
+
+                if (gdustdist < min_gpu) {
+                    min_gpu = gdustdist;
+                    min_gpu_j = j;
+                }
+                if (dustdist < min_cpu) {
+                    min_cpu = dustdist;
+                    min_cpu_j = j;
+                }
+            }
+
+            std::cout << "gpu: " << i << " - " << min_gpu_j << std::endl;
+            std::cout << "cpu: " << i << " - " << min_cpu_j << std::endl;
+        }
+        
+    }
+
+}
+
+void exp2( int argc, char **argv )
+{
+
+    TimeSeriesCollection db( argv[1], 2, -1 ); // distribution is normal
+    db.normalize();
+    
+    DUST dust( db );
+    GDUST gdust( db );
+    Watch watch;
+    
+    double time_gpu = 0;
+    double time_cpu = 0;
+            
+    for (int i = 0; i < 10; i++) {
+        TimeSeries &ts1 = db.sequences[rand() % (int)(100)];
+        TimeSeries &ts2 = db.sequences[rand() % (int)(100)];
+
+        watch.start();
+        double gdustdist = gdust.distance( ts1, ts2, -1 );
+        watch.stop();
+        time_gpu += watch.getInterval();
+                
+        watch.start();
+        double dustdist = dust.distance( ts1, ts2, -1 );
+        watch.stop();
+        time_cpu += watch.getInterval();
+        // std::cout << "time_cpu: " << time_cpu << std::endl;
+    }
+        
+    std::cout << "gpu: " << time_gpu / 10 << std::endl;
+    std::cout << "cpu: " << time_cpu / 10 << std::endl;
+
+}
+
+void exp3( int argc, char **argv )
+{
+
+    for (int t = 50; t <= 500; t += 50) {
+        char filename[50];
+        snprintf(filename, 50, "%s_%d", argv[1], t);
+        std::cout << filename << std::endl;
+        
+        TimeSeriesCollection db( filename, 2, -1 ); // distribution is normal
+        db.normalize();
+    
+        DUST dust( db );
+        GDUST gdust( db );
+        Watch watch;
+    
+        double time_gpu = 0;
+        double time_cpu = 0;
+            
+        for (int i = 0; i < 10; i++) {
+            TimeSeries &ts1 = db.sequences[rand() % (int)(100)];
+            TimeSeries &ts2 = db.sequences[rand() % (int)(100)];
+
+            watch.start();
+            double gdustdist = gdust.distance( ts1, ts2, -1 );
+            watch.stop();
+            time_gpu += watch.getInterval();
+                
+            watch.start();
+            double dustdist = dust.distance( ts1, ts2, -1 );
+            watch.stop();
+            time_cpu += watch.getInterval();
+            // std::cout << "time_cpu: " << time_cpu << std::endl;
+        }
+        
+        std::cout << "gpu: " << time_gpu / 10 << std::endl;
+        std::cout << "cpu: " << time_cpu / 10 << std::endl;
+    }
+}
 
 
 void cleanUp()
