@@ -47,7 +47,7 @@ int main( int argc, char **argv )
     
     // checkDistance( argc, argv );
 
-    exp2( argc, argv );
+    exp3( argc, argv );
     
     cleanUp();
 }

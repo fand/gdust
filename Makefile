@@ -3,8 +3,9 @@
 # doc2: http://netbsd.gw.com/cgi-bin/man-cgi?make+1+NetBSD-current
 
 CXX      = nvcc
+CPX      = g++
 CFLAGS   = -Iinclude -use_fast_math
-# -O3
+CPPFLAGS   = -Iinclude -use_fast_math -O3 -msse2 -msse3
 # -L../opt/boost/lib -I../opt/boost/include
 
 LIBS     = -lcutil -lcurand -lgsl -lgslcblas
@@ -14,9 +15,10 @@ APPNAME  = gdustdtw
 #####################################################################
 
 
-SRC	= $(wildcard src/*.cu)
-HDR	= $(wildcard include/*.hpp)
-OBJ	= $(addsuffix .o, $(basename $(SRC)))
+CUDASRC	= $(wildcard src/*.cu)
+CPPSRC	= $(wildcard src/*.cpp)
+#HDR	= $(wildcard include/*.hpp)
+OBJ	= $(addsuffix .o, $(basename $(CUDASRC))) $(addsuffix .o, $(basename $(CPPSRC)))
 
 
 all:  header $(APPNAME) trailer
@@ -26,9 +28,13 @@ all:  header $(APPNAME) trailer
 	@echo Compiling: "$@ ( $< )"
 	@$(CXX) $(CFLAGS) -c -o $@ $<
 
+%.o: %.cpp
+	@echo Compiling: "$@ ( $< )"
+	@$(CPX) $(CPPFLAGS) -c -o $@ $<
+
 $(APPNAME): $(OBJ) 
 	@echo Compiling: "$@ ( $^ )"
-	@$(CXX)  $(CFLAGS) $(OBJ) -o $(APPNAME) $(LIBS)
+	@$(CXX) $(CFLAGS) $(OBJ) -o $(APPNAME) $(LIBS)
 
 
 header:

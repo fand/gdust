@@ -78,7 +78,7 @@ void DataSet::readFile( const char *src )
     fin.close();
 }
 
-void DataSet::normalize( thrust::host_vector< float > &timeSeries )
+void DataSet::normalize( std::vector< float > &timeSeries )
 {
     float average = 0;
     float maxdev = 0;
