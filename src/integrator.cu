@@ -82,9 +82,6 @@ Integrator::Integrator()
     this->gen = new curandGenerator_t();
     curandCreateGenerator( this->gen, CURAND_RNG_PSEUDO_MTGP32 );
     curandSetPseudoRandomGeneratorSeed( *(this->gen), 1234ULL );
-
-    // generate uniform random number on in_GPU
-    curandGenerateUniform( *(this->gen), this->in_GPU, INTEGRATION_SAMPLES );
 }
 
 
@@ -117,6 +114,12 @@ float Integrator::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
     }
 
     copyToConst(seq, seq_size);
+
+    // generate uniform random number on in_GPU
+    float *in;
+    CUDA_SAFE_CALL( cudaMalloc( (void**)&in, dust_size * INTEGRATION_SAMPLES * 3) );    
+    curandGenerateUniform( *(this->gen), in, INTEGRATION_SAMPLES * n * 3 );
+
     // cudaMemcpyToSymbol(seq_const, seq, seq_size, 0, cudaMemcpyHostToDevice);
     // cudaGetSymbolAddress((void**)&seq_GPU, seq_const);
 
@@ -143,6 +146,7 @@ float Integrator::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
 
 //    CUDA_SAFE_CALL( cudaFree( seq_GPU ) );
     CUDA_SAFE_CALL( cudaFree( dust_GPU ) );
+    CUDA_SAFE_CALL( cudaFree( in ) );
     
     free(seq);
     free(dust);
