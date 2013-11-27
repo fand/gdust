@@ -280,7 +280,10 @@ __device__ void dust_kernel(
     float *in,
     float *answer_GPU)
 {
-    float input;
+    int in1, in2, in3;
+    int offset1 = blockIdx.x * INTEGRATION_SAMPLES;
+    int offset2 = offset1 + INTEGRATION_SAMPLES * gridDim.x;
+    int offset3 = offset2 + INTEGRATION_SAMPLES * gridDim.x;
     
     float o1 = 0.0f;
     float o2 = 0.0f;
@@ -292,10 +295,12 @@ __device__ void dust_kernel(
 
     // MAP PHASE
     for (int i = threadIdx.x; i < INTEGRATION_SAMPLES; i += blockDim.x) {
-        input = in[i] * RANGE_WIDTH + RANGE_MIN;
-        o1 += f1( input, params );
-        o2 += f2( input, params );
-        o3 += f3( input, params );
+        in1 = in[i + offset1] * RANGE_WIDTH + RANGE_MIN;
+        in2 = in[i + offset2] * RANGE_WIDTH + RANGE_MIN;
+        in3 = in[i + offset3] * RANGE_WIDTH + RANGE_MIN;        
+        o1 += f1( in1, params );
+        o2 += f2( in2, params );
+        o3 += f3( in3, params );
     }
     
     
