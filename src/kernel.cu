@@ -261,14 +261,26 @@ f4 ( float k, float *params )
 }
 
 
-
+// With seq on global memory
 __global__ void distance_kernel(
-//    float *seq_GPU,
+    float *seq_GPU,
     float *in_GPU,
     float *dust_GPU
     )
 {
-    float *p_param = seq_const + blockIdx.x * PARAM_SIZE;
+    float *p_param = seq_GPU + blockIdx.x * PARAM_SIZE;    
+    float *p_dust = dust_GPU + blockIdx.x;
+
+    dust_kernel(p_param, in_GPU, p_dust);
+}
+
+// With seq on const memory
+__global__ void distance_kernel(
+    float *in_GPU,
+    float *dust_GPU
+    )
+{
+    float *p_param = seq_const + blockIdx.x * PARAM_SIZE;    
     float *p_dust = dust_GPU + blockIdx.x;
 
     dust_kernel(p_param, in_GPU, p_dust);
