@@ -20,11 +20,11 @@
 
 #define PARAM_SIZE 8
 
-#define INTEGRATION_SAMPLES 16384
+#define INTEGRATION_SAMPLES 49152
 //#define TPB 512
 //#define BPG 96
 #define TPB 256
-#define BPG 64
+#define BPG 192
 
 
 Integrator::~Integrator()
@@ -49,7 +49,7 @@ Integrator::Integrator()
     this->out = (float *)malloc(size);
     this->sum = (float *)malloc(sizeof(float) * BPG);
 
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->in_GPU), size ) );
+    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->in_GPU), size * 3 ) );
     CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->out_GPU), size ) );
     CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->param_GPU), sizeof(float) * PARAM_SIZE ) );
     CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->sum_GPU), sizeof(float) * BPG ) );
@@ -58,8 +58,6 @@ Integrator::Integrator()
     curandCreateGenerator( this->gen, CURAND_RNG_PSEUDO_MTGP32 );
     curandSetPseudoRandomGeneratorSeed( *(this->gen), 1234ULL );
 
-    // generate uniform random number on in_GPU
-    curandGenerateUniform( *(this->gen), this->in_GPU, INTEGRATION_SAMPLES );
 }
 
 
@@ -78,6 +76,11 @@ float Integrator::integrate( int fnum, float *param )
                     param,
                     sizeof(float) * PARAM_SIZE,    // param size
                     cudaMemcpyHostToDevice ) );
+
+    
+    // generate uniform random number on in_GPU
+    curandGenerateUniform( *(this->gen), this->in_GPU, INTEGRATION_SAMPLES * 3 );
+
     
     // exec!
     dim3 blocks( BPG, 1, 1 );

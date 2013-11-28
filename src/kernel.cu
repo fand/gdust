@@ -7,6 +7,8 @@
 #define SQRT3 1.73205081f
 #define RANGE_VALUE SQRT3*10
 
+#define INTEGRATION_SAMPLES 49152
+
 #define INTEG_RANGE_MAX 16
 #define INTEG_RANGE_MIN -16
 
@@ -269,7 +271,7 @@ __global__ void integrate_kernel(
     float range_min,
     float range_max )
 {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x + INTEGRATION_SAMPLES * (fnum - 1);
     
     // random input "input_array[idx]" is (0, 1]
     // so we need to apply them to the range of integration.
