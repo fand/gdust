@@ -21,10 +21,8 @@
 #define PARAM_SIZE 8
 
 #define INTEGRATION_SAMPLES 49152
-//#define TPB 512
-//#define BPG 96
-#define TPB 256
-#define BPG 192
+#define TPB 512
+#define BPG 96
 
 
 Integrator::~Integrator()
