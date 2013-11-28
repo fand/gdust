@@ -96,9 +96,9 @@ GDUST::GDUST( TimeSeriesCollection &collection, const char *lookUpTablesPath )
 }
 
 
-thrust::host_vector< int > GDUST::rangeQuery( TimeSeries ts, float threshold )
+std::vector< int > GDUST::rangeQuery( TimeSeries ts, float threshold )
 {
-    thrust::host_vector< int > answer;
+    std::vector< int > answer;
 
     for( unsigned int i = 0; i < this->collection.sequences.size(); i++ )
     {

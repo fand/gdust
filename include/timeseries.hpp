@@ -3,7 +3,6 @@
 #include "randomvariable.hpp"
 
 #include <string>
-#include <thrust/host_vector.h>
 #include <vector>
 
 class TimeSeries
@@ -23,8 +22,6 @@ public:
     void printSeq();
     
 private:
-//    thrust::host_vector< RandomVariable > sequence;
-//    thrust::device_vector< RandomVariable > sequence_GPU;
     std::vector< RandomVariable > sequence;
     int id;
 };

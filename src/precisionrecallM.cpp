@@ -49,7 +49,7 @@ void PrecisionRecallM::addStopTime()
 }
 
 
-void PrecisionRecallM::add( thrust::host_vector< int > &exact, thrust::host_vector< int > &estimate )
+void PrecisionRecallM::add( std::vector< int > &exact, std::vector< int > &estimate )
 {
     this->n++;
 

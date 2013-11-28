@@ -15,9 +15,9 @@ Euclidean::Euclidean( TimeSeriesCollection &collection, bool exact )
 }
 
 
-thrust::host_vector< int > Euclidean::rangeQuery( TimeSeries &ts, float threshold )
+std::vector< int > Euclidean::rangeQuery( TimeSeries &ts, float threshold )
 {
-    thrust::host_vector< int > ids;
+    std::vector< int > ids;
     
     for( unsigned int i = 0; i < collection.sequences.size(); i++ )
     {
