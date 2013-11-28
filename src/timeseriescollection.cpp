@@ -61,7 +61,7 @@ struct mycompare
 
 void TimeSeriesCollection::computeTopKthresholds(
     unsigned int K,
-    thrust::host_vector< PairIdDistance > &topIdDists
+    std::vector< PairIdDistance > &topIdDists
 )
 {
     assert( sequences.size() >= K );
@@ -74,7 +74,7 @@ void TimeSeriesCollection::computeTopKthresholds(
     for( unsigned int i = 0; i < sequences.size(); i++)
     {
         TimeSeries &q = sequences[i];
-        thrust::host_vector< PairIdDistance > distances;
+        std::vector< PairIdDistance > distances;
 
         for( unsigned int j = 0; j < sequences.size(); j++)
         {

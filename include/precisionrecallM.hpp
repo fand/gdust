@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <sys/time.h>
-#include <thrust/host_vector.h>
+#include <vector>
 
 class PrecisionRecallM
 {
@@ -11,7 +11,7 @@ public:
 
     void addStartTime();
     void addStopTime();
-    void add( thrust::host_vector< int > &exact, thrust::host_vector< int > &estimate );
+    void add( std::vector< int > &exact, std::vector< int > &estimate );
     float getPrecision();
     float getRecall();
     float getF1();

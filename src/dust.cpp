@@ -271,9 +271,9 @@ double DUST::phi( RandomVariable &x, RandomVariable &y )
 //        exit(0);
     }
 
-    // assert( NOTNANINF(int3) );
-    // return int3;
-    return integrate( f4, (void *)params );
+    assert( NOTNANINF(int3) );
+    return int3;
+    //return integrate( f4, (void *)params );
 }
 
 

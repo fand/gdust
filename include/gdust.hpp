@@ -33,7 +33,7 @@ class GDUST
 public:
     ~GDUST();
     GDUST( TimeSeriesCollection &collection, const char *lookUpTablesPath = NULL );
-    thrust::host_vector< int > rangeQuery( TimeSeries ts, float threshold );
+    std::vector< int > rangeQuery( TimeSeries ts, float threshold );
 
     bool lookupTablesAvailable;
     float lookuptables[ 3 ][ STDDEV_STEPS + 1 ][ STDDEV_STEPS + 1 ][ DISTANCE_STEPS + 1 ];
