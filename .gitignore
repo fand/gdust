@@ -2,4 +2,4 @@ data/
 datasets/
 udatasets/
 *.o
-gdustdtw
+bin/
