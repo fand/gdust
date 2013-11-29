@@ -10,7 +10,7 @@ CPPFLAGS   = -Iinclude -use_fast_math -O3 -msse2 -msse3
 
 LIBS     = -lcutil -lcurand -lgsl -lgslcblas
 
-APPNAME  = gdustdtw
+APPNAME  = bin/gdustdtw
 
 #####################################################################
 
