@@ -2,3 +2,4 @@ data/
 datasets/
 udatasets/
 *.o
+bin/
