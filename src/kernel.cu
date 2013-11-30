@@ -268,8 +268,8 @@ __global__ void distance_kernel(
     float *dust_GPU
     )
 {
-    float *p_param = seq_GPU + blockIdx.x * PARAM_SIZE;    
-    float *p_dust = dust_GPU + blockIdx.x;
+    float *p_param = seq_GPU  + blockIdx.x * PARAM_SIZE;    
+    float *p_dust  = dust_GPU + blockIdx.x;
 
     dust_kernel(p_param, samples_GPU, p_dust);
 }
@@ -281,7 +281,7 @@ __global__ void distance_kernel(
     )
 {
     float *p_param = seq_const + blockIdx.x * PARAM_SIZE;    
-    float *p_dust = dust_GPU + blockIdx.x;
+    float *p_dust  = dust_GPU + blockIdx.x;
 
     dust_kernel(p_param, samples_GPU, p_dust);
 }
@@ -315,19 +315,17 @@ __device__ void dust_kernel(
         o3 += f3( in3, params );
     }
     
-    
     // REDUCE PHASE
     sdata1[threadIdx.x] = o1;
     sdata2[threadIdx.x] = o2;
     sdata3[threadIdx.x] = o3;
     reduceBlock<TPB>(sdata1, sdata2, sdata3);
 
-
     float r = (float)RANGE_WIDTH / INTEGRATION_SAMPLES;
 
     if (threadIdx.x == 0) {
         float d = -log10(sdata3[0] / (sdata1[0] * sdata2[0] * r));
-        if (d < 0) d =0.0f;
+        if (d < 0) d = 0.0f;
         *answer_GPU = d;
     }
 }

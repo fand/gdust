@@ -55,8 +55,7 @@ float Integrator::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
     CUDA_SAFE_CALL(cudaMalloc((void**)&seq_GPU, seq_size));
     CUDA_SAFE_CALL(cudaMalloc((void**)&dust_GPU, dust_size));
 
-    for( int i = 0; i < n; i++ )
-    {
+    for (int i = 0; i < n; i++) {
         RandomVariable x = ts1.at(i);
         RandomVariable y = ts2.at(i);
         
@@ -68,17 +67,18 @@ float Integrator::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
         seq[j+4] = y.observation;
         seq[j+5] = y.stddev;
     }
-
-    // generate uniform random number on samples_GPU
-    float *samples_GPU;
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&samples_GPU, dust_size * INTEGRATION_SAMPLES * 3) );    
-    curandGenerateUniform( *(this->gen), samples_GPU, INTEGRATION_SAMPLES * n * 3 );
-
+    
     CUDA_SAFE_CALL( cudaMemcpy( seq_GPU,
                                 seq,
                                 seq_size,
                                 cudaMemcpyHostToDevice ) );
+    
+    // generate uniform random number on samples_GPU
+    float *samples_GPU;
+    CUDA_SAFE_CALL( cudaMalloc( (void**)&samples_GPU, sizeof(float) * INTEGRATION_SAMPLES * n * 3) );
+    curandGenerateUniform( *(this->gen), samples_GPU, INTEGRATION_SAMPLES * n * 3 );
 
+    
     // call kernel
     distance_kernel<<< n, TPB >>>(seq_GPU, samples_GPU, dust_GPU);
 
