@@ -74,6 +74,9 @@ void exp3( int argc, char **argv )
         double time_gpu = 0;
         double time_cpu = 0;
 
+        double res_gpu = 0;
+        double res_cpu = 0;
+
         for (int i = 0; i < 10; i++) {
             TimeSeries &ts1 = db.sequences[rand() % (int)(100)];
             TimeSeries &ts2 = db.sequences[rand() % (int)(100)];
@@ -82,16 +85,19 @@ void exp3( int argc, char **argv )
             double gdustdist = gdust.distance( ts1, ts2, -1 );
             watch.stop();
             time_gpu += watch.getInterval();
+            res_gpu += gdustdist;
 
             watch.start();
             double dustdist = dust.distance( ts1, ts2, -1 );
             watch.stop();
             time_cpu += watch.getInterval();
-            // std::cout << "time_cpu: " << time_cpu << std::endl;
+            res_cpu += dustdist;
         }
 
-        std::cout << "gpu: " << time_gpu / 10 << std::endl;
-        std::cout << "cpu: " << time_cpu / 10 << std::endl;
+        std::cout << "gdust: " << res_gpu / 10 << std::endl;
+        std::cout << "cdust: " << res_cpu / 10 << std::endl;
+        std::cout << "time_gpu: " << time_gpu / 10 << std::endl;
+        std::cout << "time_cpu: " << time_cpu / 10 << std::endl;
     }
 }
 
