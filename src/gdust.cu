@@ -43,10 +43,15 @@ GDUST::GDUST( TimeSeriesCollection &collection, const char *lookUpTablesPath )
 
 float GDUST::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
 {
-    if( n == -1 ) n = min(ts1.length(), ts2.length());
-    else n = min(n, min(ts1.length(), ts2.length()));
+    int lim;
+    if ( n == -1 ) {
+        lim = min(ts1.length(), ts2.length());
+    }
+    else {
+        lim = min(n, min(ts1.length(), ts2.length()));
+    }
 
-    return (this->integ)->distance(ts1, ts2, n);
+    return (this->integ)->distance(ts1, ts2, lim);
 }
 
 
