@@ -90,32 +90,16 @@ float Integrator::integrate( int fnum, float *param )
                                              this->out_GPU,
                                              range_min,
                                              range_max );
-/*
+    
+
     CUDA_SAFE_CALL(
         cudaMemcpy( this->out, this->out_GPU,
                     sizeof(float) * calls, cudaMemcpyDeviceToHost ) );
 
-    float tes = 0;
-    for (int j=0; j<calls; j++) {
-        if (fnum == 4 && this->out[j] != 1.0f) {
-            std::cout << "f4 error : " << this->out[j] << std::endl;
-//            exit(1);
-        }
-        tes += this->out[j];
-    }
-*/
-
-    reduce<float>(calls, TPB, BPG, this->out_GPU, this->sum_GPU);
-
-    CUDA_SAFE_CALL( cudaMemcpy( this->sum,
-                                this->sum_GPU,
-                                sizeof(float) * BPG,
-                                cudaMemcpyDeviceToHost ) );
-
-    float tes = 0;
-    for (int i=0; i < BPG; i++) {
-        tes += sum[i];
+    float total = 0;
+    for (int i = 0; i < calls; i++) {
+        total += this->out[i];
     }
 
-    return tes * ( range_max - range_min ) / calls;
+    return total * ( range_max - range_min ) / calls;
 }
