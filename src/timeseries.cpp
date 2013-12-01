@@ -13,6 +13,12 @@ TimeSeries::TimeSeries()
     this->id = -1;
 }
 
+TimeSeries::TimeSeries(std::vector<RandomVariable> seq)
+{
+    this->id = -1;
+    this->sequence = seq;
+}
+
 
 TimeSeries::TimeSeries( const char *path, int distribution )
 {
