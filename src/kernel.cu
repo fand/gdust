@@ -292,7 +292,7 @@ __device__ void dust_kernel(
     float *in,
     float *answer_GPU)
 {
-    int in1, in2, in3;
+    float in1, in2, in3;
     int offset1 = blockIdx.x * INTEGRATION_SAMPLES;
     int offset2 = offset1 + INTEGRATION_SAMPLES * gridDim.x;
     int offset3 = offset2 + INTEGRATION_SAMPLES * gridDim.x;
