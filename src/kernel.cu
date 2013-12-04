@@ -261,17 +261,29 @@ f4 ( float k, float *params )
 }
 
 
-
+// With seq on global memory
 __global__ void distance_kernel(
-//    float *seq_GPU,
-    float *in_GPU,
+    float *seq_GPU,
+    float *samples_GPU,
     float *dust_GPU
     )
 {
-    float *p_param = seq_const + blockIdx.x * PARAM_SIZE;
-    float *p_dust = dust_GPU + blockIdx.x;
+    float *p_param = seq_GPU  + blockIdx.x * PARAM_SIZE;    
+    float *p_dust  = dust_GPU + blockIdx.x;
 
-    dust_kernel(p_param, in_GPU, p_dust);
+    dust_kernel(p_param, samples_GPU, p_dust);
+}
+
+// With seq on const memory
+__global__ void distance_kernel(
+    float *samples_GPU,
+    float *dust_GPU
+    )
+{
+    float *p_param = seq_const + blockIdx.x * PARAM_SIZE;    
+    float *p_dust  = dust_GPU + blockIdx.x;
+
+    dust_kernel(p_param, samples_GPU, p_dust);
 }
 
 
@@ -280,7 +292,7 @@ __device__ void dust_kernel(
     float *in,
     float *answer_GPU)
 {
-    int in1, in2, in3;
+    float in1, in2, in3;
     int offset1 = blockIdx.x * INTEGRATION_SAMPLES;
     int offset2 = offset1 + INTEGRATION_SAMPLES * gridDim.x;
     int offset3 = offset2 + INTEGRATION_SAMPLES * gridDim.x;
@@ -303,19 +315,17 @@ __device__ void dust_kernel(
         o3 += f3( in3, params );
     }
     
-    
     // REDUCE PHASE
     sdata1[threadIdx.x] = o1;
     sdata2[threadIdx.x] = o2;
     sdata3[threadIdx.x] = o3;
     reduceBlock<TPB>(sdata1, sdata2, sdata3);
 
-
     float r = (float)RANGE_WIDTH / INTEGRATION_SAMPLES;
 
     if (threadIdx.x == 0) {
         float d = -log10(sdata3[0] / (sdata1[0] * sdata2[0] * r));
-        if (d < 0) d =0.0f;
+        if (d < 0) d = 0.0f;
         *answer_GPU = d;
     }
 }

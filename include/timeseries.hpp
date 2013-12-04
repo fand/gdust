@@ -9,6 +9,7 @@ class TimeSeries
 {
 public:
     TimeSeries();
+    TimeSeries(std::vector<RandomVariable> seq);    
     TimeSeries( const char *path, int distribution );
     TimeSeries( std::string &s, int distribution );
     void readFile( const char *path, int distribution );
