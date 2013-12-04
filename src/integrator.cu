@@ -11,7 +11,6 @@
 #include <iostream>
 
 
-
 #define VERYSMALL 1E-20
 #define SQRT3 1.73205081
 
@@ -24,7 +23,6 @@
 
 #define TPB 512
 #define BPG 96
-
 
 
 Integrator::~Integrator()
@@ -43,7 +41,8 @@ Integrator::Integrator()
 }
 
 
-float Integrator::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
+float
+Integrator::distance (TimeSeries &ts1, TimeSeries &ts2, int n)
 {
     size_t seq_size  = sizeof(float) * n * PARAM_SIZE;
     size_t dust_size = sizeof(float) * n;
@@ -103,4 +102,3 @@ float Integrator::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
     
     return sqrt(dist);
 }
-

@@ -38,24 +38,24 @@ class DUST
 {
 public:
     ~DUST();
-    DUST( TimeSeriesCollection &collection, const char *lookUpTablesPath = NULL );
-    std::vector< int > rangeQuery( TimeSeries ts, double threshold );
+    DUST(TimeSeriesCollection &collection, const char *lookUpTablesPath = NULL);
+    std::vector< int > rangeQuery(TimeSeries ts, double threshold);
 
     bool lookupTablesAvailable;
     double lookuptables[ 3 ][ STDDEV_STEPS + 1 ][ STDDEV_STEPS + 1 ][ DISTANCE_STEPS + 1 ];
 
-    double distance( TimeSeries &ts1, TimeSeries &ts2, int n = -1 );
-    double dtw( TimeSeries &ts1, TimeSeries &ts2 );
+    double distance(TimeSeries &ts1, TimeSeries &ts2, int n = -1);
+    double dtw(TimeSeries &ts1, TimeSeries &ts2);
 
-    double integrate( double (*f)( double * x_array, size_t dim, void * params), void *params );
+    double integrate(double (*f)( double * x_array, size_t dim, void * params), void *params);
 
     void init();
-    void readLookUpTables( const char *lookUpTablesPath );
+    void readLookUpTables(const char *lookUpTablesPath);
 
-    double dust( RandomVariable &x, RandomVariable &y);
-    double phi( RandomVariable &x, RandomVariable &y);
+    double dust(RandomVariable &x, RandomVariable &y);
+    double phi(RandomVariable &x, RandomVariable &y);
 
-    void buildFDustTables( const char *path );
+    void buildFDustTables(const char *path);
 
     gsl_rng *r_rng;
     const gsl_rng_type *T;
@@ -63,7 +63,7 @@ public:
     TimeSeriesCollection collection;
 
 private:
-    void calcCost( TimeSeries &ts1, TimeSeries &ts2, double *table_d, double *table_g, int len1, int len2 );
-    void calcGamma( double *table_d, double *table_g, int len1, int len2 );
-    double calcSum( double *table_d, double *table_g, int len1, int len2 );
+    void calcCost(TimeSeries &ts1, TimeSeries &ts2, double *table_d, double *table_g, int len1, int len2);
+    void calcGamma(double *table_d, double *table_g, int len1, int len2);
+    double calcSum(double *table_d, double *table_g, int len1, int len2);
 };

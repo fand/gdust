@@ -4,14 +4,16 @@
 #include <sys/time.h>
 #include <vector>
 
+
 class PrecisionRecallM
 {
 public:
-    PrecisionRecallM( const char *s );
+    PrecisionRecallM(const char *s);
 
     void addStartTime();
     void addStopTime();
-    void add( std::vector< int > &exact, std::vector< int > &estimate );
+    void add(std::vector< int > &exact, std::vector< int > &estimate);
+    
     float getPrecision();
     float getRecall();
     float getF1();

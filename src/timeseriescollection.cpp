@@ -9,34 +9,30 @@
 #include <algorithm>
 
 
-TimeSeriesCollection::TimeSeriesCollection()
-{
-}
+TimeSeriesCollection::TimeSeriesCollection(){}
 
 
-TimeSeriesCollection::TimeSeriesCollection( const char *path, int distribution, int limitN )
+TimeSeriesCollection::TimeSeriesCollection (const char *path, int distribution, int limitN)
 {
     this->readFile( path, distribution, limitN );
 }
 
 
-void TimeSeriesCollection::readFile( const char *path, int distribution, int limitN )
+void
+TimeSeriesCollection::readFile (const char *path, int distribution, int limitN)
 {
     std::ifstream fin(path);
 
-    if(fin == NULL)
-    {
+    if (fin == NULL) {
         FATAL( "unable to read timeseriescollection from file" );
     }
 
     std::string line;
-    while( getline( fin, line ) )
-    {
+    while (getline( fin, line )) {
         sequences.push_back( TimeSeries( line, distribution ) );
         sequences[ sequences.size() - 1 ].setId( sequences.size() );
 
-        if( limitN != -1 && (int)sequences.size() == limitN )
-        {
+        if (limitN != -1 && (int)sequences.size() == limitN) {
             break;
         }
     }
@@ -59,10 +55,9 @@ struct mycompare
 };
 
 
-void TimeSeriesCollection::computeTopKthresholds(
-    unsigned int K,
-    std::vector< PairIdDistance > &topIdDists
-)
+void
+TimeSeriesCollection::computeTopKthresholds (unsigned int K,
+                                             std::vector< PairIdDistance > &topIdDists)
 {
     assert( sequences.size() >= K );
     topIdDists.resize( sequences.size() );
@@ -71,8 +66,7 @@ void TimeSeriesCollection::computeTopKthresholds(
     
     Euclidean trueEuclidean( *this, true );
 
-    for( unsigned int i = 0; i < sequences.size(); i++)
-    {
+    for (unsigned int i = 0; i < sequences.size(); i++) {
         TimeSeries &q = sequences[i];
         std::vector< PairIdDistance > distances;
 
@@ -89,12 +83,15 @@ void TimeSeriesCollection::computeTopKthresholds(
 }
 
 
-void TimeSeriesCollection::normalize()
+void
+TimeSeriesCollection::normalize()
 {
     for (int i=0; i<sequences.size(); i++) {
         sequences[i].normalize();
     }
 }
+
+
 void TimeSeriesCollection::printSeqs()
 {
     for (int i=0; i<sequences.size(); i++) {

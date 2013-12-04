@@ -21,29 +21,21 @@
 #define DISTANCE_STEPS ((int)((DISTANCE_END-DISTANCE_BEGIN)/DISTANCE_STEP)+1)
 
 
-// struct tuple_t {
-//     float x;
-//     float y;
-//     float m;
-// };
-
-
 class GDUST
 {
 public:
     ~GDUST();
-    GDUST( TimeSeriesCollection &collection, const char *lookUpTablesPath = NULL );
+    GDUST(TimeSeriesCollection &collection, const char *lookUpTablesPath = NULL);
 
-    bool lookupTablesAvailable;
+    bool  lookupTablesAvailable;
     float lookuptables[ 3 ][ STDDEV_STEPS + 1 ][ STDDEV_STEPS + 1 ][ DISTANCE_STEPS + 1 ];
 
-    float distance( TimeSeries &ts1, TimeSeries &ts2, int n = -1 );
-    double dtw( TimeSeries &ts1, TimeSeries &ts2 );
+    float  distance (TimeSeries &ts1, TimeSeries &ts2, int n = -1);
+    double dtw (TimeSeries &ts1, TimeSeries &ts2);
     
     void init();
 
     TimeSeriesCollection collection;
-
 
 private:
     Integrator *integ;

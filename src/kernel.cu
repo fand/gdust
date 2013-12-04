@@ -19,18 +19,9 @@
 #define PARAM_Y_STDDEV 5
 
 
-__constant__ __device__ float seq_const[6*1024];
-
-
-void copyToConst(void* src, size_t size)
-{
-    cudaMemcpyToSymbol(seq_const, src, size, 0, cudaMemcpyHostToDevice);
-}
-
-
-
 __device__ bool
-check_uniform_lower(float lower, float *result) {
+check_uniform_lower (float lower, float *result)
+{
     if (isfinite(lower)) {
         return true;
     } else {
@@ -41,10 +32,12 @@ check_uniform_lower(float lower, float *result) {
 
 
 __device__ bool
-check_uniform_upper(float upper, float *result) {
-    if (isfinite(upper)){
+check_uniform_upper (float upper, float *result)
+{
+    if (isfinite(upper)) {
         return true;
-    } else {
+    }
+    else {
         *result = nan("");
         return false;
     }
@@ -52,7 +45,8 @@ check_uniform_upper(float upper, float *result) {
 
 
 __device__ bool
-check_uniform(float lower, float upper, float *result) {
+check_uniform (float lower, float upper, float *result)
+{
     if (check_uniform_lower(lower, result) == false) { return false; }
     else if (check_uniform_upper(upper, result) == false) { return false; }
     // If lower == upper then 1 / (upper-lower) = 1/0 = +infinity!
@@ -66,7 +60,8 @@ check_uniform(float lower, float upper, float *result) {
 
 
 __device__ bool
-check_uniform_x(float const& x, float *result) {
+check_uniform_x (float const& x, float *result)
+{
     if (isfinite(x)) {
         return true;
     } else {
@@ -77,7 +72,8 @@ check_uniform_x(float const& x, float *result) {
     
 
 __device__ bool
-check_location(float location, float * result) {
+check_location (float location, float * result)
+{
     if (!(isfinite(location))) {
         *result = nan("");
         return false;
@@ -88,7 +84,8 @@ check_location(float location, float * result) {
 
 
 __device__ bool
-check_x(float x, float *result) {
+check_x (float x, float *result)
+{
     if(!(isfinite(x))) {
         *result = nan("");
         return false;
@@ -98,8 +95,9 @@ check_x(float x, float *result) {
 
 
 __device__ bool
-check_scale(float scale, float *result) {
-    if((scale <= 0) || !(isfinite(scale))) {
+check_scale(float scale, float *result)
+{
+    if ((scale <= 0) || !(isfinite(scale))) {
         *result = nanf("");
         return false;
     } else {
@@ -109,7 +107,8 @@ check_scale(float scale, float *result) {
 
 
 __device__ bool
-verify_lambda(float l, float *result) {
+verify_lambda (float l, float *result)
+{
     if (l <= 0) {
         *result = nan("");
         return false;
@@ -120,7 +119,8 @@ verify_lambda(float l, float *result) {
 
 
 __device__ bool
-verify_exp_x(float x, float *result) {
+verify_exp_x (float x, float *result)
+{
     if (x < 0) {
         *result = nan("");
         return false;
@@ -133,7 +133,8 @@ verify_exp_x(float x, float *result) {
 
 
 
-__device__ float pdf_uniform( float lower, float upper, float x )
+__device__ float
+pdf_uniform (float lower, float upper, float x)
 {
     if ((x < lower) || (x > upper)) {
         return 0.0f;
@@ -142,9 +143,10 @@ __device__ float pdf_uniform( float lower, float upper, float x )
     return 1.0f / (upper - lower);
 }
 
-__device__ float pdf_normal( float mean, float sd, float x )
+__device__ float
+pdf_normal (float mean, float sd, float x)
 {
-    if(isinf(x)) return 0; // pdf(infinity) is zero.
+    if (isinf(x)) { return 0; }  // pdf(infinity) is zero.
 
     float result = 0.0f;
 
@@ -160,18 +162,16 @@ __device__ float pdf_normal( float mean, float sd, float x )
 
 
 __device__ float
-myPDF( int distribution, float mean, float stddev, float v )
+myPDF (int distribution, float mean, float stddev, float v)
 {
     float ret = -1.0f;
-    if(stddev == 0.0f) stddev = 0.2f;
+    if (stddev == 0.0f) stddev = 0.2f;
 
-    if ( distribution == RANDVAR_UNIFORM )
-    {
+    if (distribution == RANDVAR_UNIFORM) {
         float b = SQRT3 * stddev;
-        ret = pdf_uniform( -b, b, v );
-        
-    } else if ( distribution == RANDVAR_NORMAL )
-    {
+        ret = pdf_uniform( -b, b, v );        
+    }
+    else if (distribution == RANDVAR_NORMAL) {
         ret = pdf_normal( 0, 1, v / stddev );
     }
 
@@ -181,7 +181,7 @@ myPDF( int distribution, float mean, float stddev, float v )
 
 // calculate p(y|r(y)=v)p(r(y)=v)
 __device__ float
-f1 ( float v, float *params )
+f1 (float v, float *params)
 {
     float p1 = myPDF( params[ PARAM_X_DISTRIBUTION ],   // distribution
                       0.0f,                                // mean
@@ -196,7 +196,7 @@ f1 ( float v, float *params )
 
 // calculate p(y|r(y)=v)p(r(y)=v)
 __device__ float
-f2 ( float v, float *params )
+f2 (float v, float *params)
 {
     float p1 = myPDF( params[ PARAM_Y_DISTRIBUTION ],   // distribution
                       0.0f,                                // mean
@@ -211,7 +211,7 @@ f2 ( float v, float *params )
 
 // p(r(x)=z|x) * p(r(y)=z|y)
 __device__ float
-f3 ( float z, float *params )
+f3 (float z, float *params)
 {
     int x_dist = (int)params[ PARAM_X_DISTRIBUTION ];
     float x = params[ PARAM_X_OBSERVATION ] - 0.1f;
@@ -222,16 +222,16 @@ f3 ( float z, float *params )
     
     float p1, p2;
 
-    if ( x_dist == RANDVAR_UNIFORM ) {
+    if (x_dist == RANDVAR_UNIFORM) {
         float x_adjust = 0;
         float y_adjust = 0;
 
-        if ( abs(x-z) > x_stddev * SQRT3 ) {
+        if (abs(x-z) > x_stddev * SQRT3) {
             x_adjust = myPDF( x_dist, 0, x_stddev, 0 ) *
                 ( 1 + erf( -( abs(x-z) - x_stddev * SQRT3 ) ) );
         }
         
-        if ( abs(y-z) > y_stddev * SQRT3 ) {
+        if (abs(y-z) > y_stddev * SQRT3) {
             y_adjust = myPDF( y_dist, 0, y_stddev, 0 ) *
                 ( 1 + erf( -( abs(y-z) - y_stddev * SQRT3 ) ) );
         }
@@ -241,8 +241,8 @@ f3 ( float z, float *params )
 
         p1 = pdf_x * pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
         p2 = pdf_y * pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
-        
-    } else {
+    }
+    else {
         // p(r(x)=z|x) and p(r(y)=z|y)
         p1 = ( myPDF( x_dist, 0, x_stddev, x-z ) *
                pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
@@ -255,18 +255,17 @@ f3 ( float z, float *params )
 
 
 __device__ float
-f4 ( float k, float *params )
+f4 (float k, float *params)
 {
     return 1.0f;
 }
 
 
 // With seq on global memory
-__global__ void distance_kernel(
-    float *seq_GPU,
-    float *samples_GPU,
-    float *dust_GPU
-    )
+__global__ void
+distance_kernel (float *seq_GPU,
+                 float *samples_GPU,
+                 float *dust_GPU)
 {
     float *p_param = seq_GPU  + blockIdx.x * PARAM_SIZE;    
     float *p_dust  = dust_GPU + blockIdx.x;
@@ -274,23 +273,11 @@ __global__ void distance_kernel(
     dust_kernel(p_param, samples_GPU, p_dust);
 }
 
-// With seq on const memory
-__global__ void distance_kernel(
-    float *samples_GPU,
-    float *dust_GPU
-    )
-{
-    float *p_param = seq_const + blockIdx.x * PARAM_SIZE;    
-    float *p_dust  = dust_GPU + blockIdx.x;
 
-    dust_kernel(p_param, samples_GPU, p_dust);
-}
-
-
-__device__ void dust_kernel(
-    float *params,
-    float *in,
-    float *answer_GPU)
+__device__ void
+dust_kernel (float *params,
+             float *in,
+             float *answer_GPU)
 {
     float in1, in2, in3;
     int offset1 = blockIdx.x * INTEGRATION_SAMPLES;
@@ -306,6 +293,7 @@ __device__ void dust_kernel(
     __shared__ float sdata3[TPB];
 
     // MAP PHASE
+    // put (f1, f2, f3) into (o1, o2, o3) for all samples
     for (int i = threadIdx.x; i < INTEGRATION_SAMPLES; i += blockDim.x) {
         in1 = in[i + offset1] * RANGE_WIDTH + RANGE_MIN;
         in2 = in[i + offset2] * RANGE_WIDTH + RANGE_MIN;
@@ -316,6 +304,7 @@ __device__ void dust_kernel(
     }
     
     // REDUCE PHASE
+    // Get sum of (o1, o2, o3) for all threads
     sdata1[threadIdx.x] = o1;
     sdata2[threadIdx.x] = o2;
     sdata3[threadIdx.x] = o3;
@@ -334,7 +323,8 @@ __device__ void dust_kernel(
 
 template<unsigned int blockSize>
 __device__ void
-reduceBlock(float *sdata1, float *sdata2, float *sdata3){
+reduceBlock (float *sdata1, float *sdata2, float *sdata3)
+{
     // make sure all threads are ready
     __syncthreads();
     
@@ -342,47 +332,36 @@ reduceBlock(float *sdata1, float *sdata2, float *sdata3){
     float mySum1 = sdata1[tid];
     float mySum2 = sdata2[tid];
     float mySum3 = sdata3[tid];    
-    // unsigned int blockSize = blockDim.x;
     
     // do reduction in shared mem
-    if (blockSize >= 512)
-    {
-        if (tid < 256)
-        {
+    if (blockSize >= 512) {
+        if (tid < 256) {
             sdata1[tid] = mySum1 = mySum1 + sdata1[tid + 256];
             sdata2[tid] = mySum2 = mySum2 + sdata2[tid + 256];
             sdata3[tid] = mySum3 = mySum3 + sdata3[tid + 256];            
         }
-
         __syncthreads();
     }
 
-    if (blockSize >= 256)
-    {
-        if (tid < 128)
-        {
+    if (blockSize >= 256) {
+        if (tid < 128) {
             sdata1[tid] = mySum1 = mySum1 + sdata1[tid + 128];
             sdata2[tid] = mySum2 = mySum2 + sdata2[tid + 128];
             sdata3[tid] = mySum3 = mySum3 + sdata3[tid + 128];            
         }
-
         __syncthreads();
     }
 
-    if (blockSize >= 128)
-    {
-        if (tid <  64)
-        {
+    if (blockSize >= 128) {
+        if (tid <  64) {
             sdata1[tid] = mySum1 = mySum1 + sdata1[tid + 64];
             sdata2[tid] = mySum2 = mySum2 + sdata2[tid + 64];
             sdata3[tid] = mySum3 = mySum3 + sdata3[tid + 64];            
         }
-
         __syncthreads();
     }
 
-    if (tid < 32)
-    {
+    if (tid < 32) {
         // now that we are using warp-synchronous programming (below)
         // we need to declare our shared memory volatile so that the compiler
         // doesn't reorder stores to it and induce incorrect behavior.
@@ -390,43 +369,37 @@ reduceBlock(float *sdata1, float *sdata2, float *sdata3){
         volatile float *smem2 = sdata2;
         volatile float *smem3 = sdata3;
 
-        if (blockSize >=  64)
-        {
+        if (blockSize >=  64) {
             smem1[tid] = mySum1 = mySum1 + smem1[tid + 32];
             smem2[tid] = mySum2 = mySum2 + smem2[tid + 32];
             smem3[tid] = mySum3 = mySum3 + smem3[tid + 32];
         }
 
-        if (blockSize >=  32)
-        {
+        if (blockSize >=  32) {
             smem1[tid] = mySum1 = mySum1 + smem1[tid + 16];
             smem2[tid] = mySum2 = mySum2 + smem2[tid + 16];
             smem3[tid] = mySum3 = mySum3 + smem3[tid + 16];
         }
 
-        if (blockSize >=  16)
-        {
+        if (blockSize >=  16) {
             smem1[tid] = mySum1 = mySum1 + smem1[tid + 8];
             smem2[tid] = mySum2 = mySum2 + smem2[tid + 8];
             smem3[tid] = mySum3 = mySum3 + smem3[tid + 8];
         }
 
-        if (blockSize >=   8)
-        {
+        if (blockSize >=   8) {
             smem1[tid] = mySum1 = mySum1 + smem1[tid + 4];
             smem2[tid] = mySum2 = mySum2 + smem2[tid + 4];
             smem3[tid] = mySum3 = mySum3 + smem3[tid + 4];
         }
 
-        if (blockSize >=   4)
-        {
+        if (blockSize >=   4) {
             smem1[tid] = mySum1 = mySum1 + smem1[tid + 2];
             smem2[tid] = mySum2 = mySum2 + smem2[tid + 2];
             smem3[tid] = mySum3 = mySum3 + smem3[tid + 2];
         }
 
-        if (blockSize >=   2)
-        {
+        if (blockSize >=   2) {
             smem1[tid] = mySum1 = mySum1 + smem1[tid + 1];
             smem2[tid] = mySum2 = mySum2 + smem2[tid + 1];
             smem3[tid] = mySum3 = mySum3 + smem3[tid + 1];
