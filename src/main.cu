@@ -219,13 +219,12 @@ void exp3( int argc, char **argv )
             watch.stop();
             time_gpu += watch.getInterval();
             res_gpu += gdustdist;
-                
+
             watch.start();
             double dustdist = dust.distance( ts1, ts2, -1 );
             watch.stop();
             time_cpu += watch.getInterval();
             res_cpu += dustdist;
-            // std::cout << "time_cpu: " << time_cpu << std::endl;
         }
         
         std::cout << "gdust: " << res_gpu / 10 << std::endl;

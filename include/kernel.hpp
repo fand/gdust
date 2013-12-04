@@ -1,6 +1,6 @@
 #pragma once
 
-#define TPB 256
+#define TPB 512
 #define INTEGRATION_SAMPLES 49152
 #define RANGE_MIN -16
 #define RANGE_MAX 16
