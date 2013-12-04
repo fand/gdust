@@ -134,7 +134,7 @@ verify_exp_x (float x, float *result)
 
 
 __device__ float
-pdf_uniform (float lower, float upper, float x)
+g_pdf_uniform (float lower, float upper, float x)
 {
     if ((x < lower) || (x > upper)) {
         return 0.0f;
@@ -144,7 +144,7 @@ pdf_uniform (float lower, float upper, float x)
 }
 
 __device__ float
-pdf_normal (float mean, float sd, float x)
+g_pdf_normal (float mean, float sd, float x)
 {
     if (isinf(x)) { return 0; }  // pdf(infinity) is zero.
 
@@ -162,17 +162,17 @@ pdf_normal (float mean, float sd, float x)
 
 
 __device__ float
-myPDF (int distribution, float mean, float stddev, float v)
+g_myPDF (int distribution, float mean, float stddev, float v)
 {
     float ret = -1.0f;
     if (stddev == 0.0f) stddev = 0.2f;
 
     if (distribution == RANDVAR_UNIFORM) {
         float b = SQRT3 * stddev;
-        ret = pdf_uniform( -b, b, v );        
+        ret = g_pdf_uniform( -b, b, v );
     }
     else if (distribution == RANDVAR_NORMAL) {
-        ret = pdf_normal( 0, 1, v / stddev );
+        ret = g_pdf_normal( 0, 1, v / stddev );
     }
 
     return ret;
@@ -181,14 +181,14 @@ myPDF (int distribution, float mean, float stddev, float v)
 
 // calculate p(y|r(y)=v)p(r(y)=v)
 __device__ float
-f1 (float v, float *params)
+g_f1 (float v, float *params)
 {
-    float p1 = myPDF( params[ PARAM_X_DISTRIBUTION ],   // distribution
-                      0.0f,                                // mean
-                      params[ PARAM_X_STDDEV ],         // stddev
-                      params[ PARAM_X_OBSERVATION ]-v ); // target
+    float p1 = g_myPDF( params[ PARAM_X_DISTRIBUTION ],   // distribution
+                        0.0f,                                // mean
+                        params[ PARAM_X_STDDEV ],         // stddev
+                        params[ PARAM_X_OBSERVATION ]-v ); // target
      
-    float p2 = pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
+    float p2 = g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
 
     return p1 * p2;
 }
@@ -196,14 +196,14 @@ f1 (float v, float *params)
 
 // calculate p(y|r(y)=v)p(r(y)=v)
 __device__ float
-f2 (float v, float *params)
+g_f2 (float v, float *params)
 {
-    float p1 = myPDF( params[ PARAM_Y_DISTRIBUTION ],   // distribution
+    float p1 = g_myPDF( params[ PARAM_Y_DISTRIBUTION ],   // distribution
                       0.0f,                                // mean
                       params[ PARAM_Y_STDDEV ],         // stddev
                       params[ PARAM_Y_OBSERVATION ] - v );  // target
     
-    float p2 = pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
+    float p2 = g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
     
     return p1 * p2;
 }
@@ -211,7 +211,7 @@ f2 (float v, float *params)
 
 // p(r(x)=z|x) * p(r(y)=z|y)
 __device__ float
-f3 (float z, float *params)
+g_f3 (float z, float *params)
 {
     int x_dist = (int)params[ PARAM_X_DISTRIBUTION ];
     float x = params[ PARAM_X_OBSERVATION ] - 0.1f;
@@ -227,27 +227,27 @@ f3 (float z, float *params)
         float y_adjust = 0;
 
         if (abs(x-z) > x_stddev * SQRT3) {
-            x_adjust = myPDF( x_dist, 0, x_stddev, 0 ) *
+            x_adjust = g_myPDF( x_dist, 0, x_stddev, 0 ) *
                 ( 1 + erf( -( abs(x-z) - x_stddev * SQRT3 ) ) );
         }
         
         if (abs(y-z) > y_stddev * SQRT3) {
-            y_adjust = myPDF( y_dist, 0, y_stddev, 0 ) *
+            y_adjust = g_myPDF( y_dist, 0, y_stddev, 0 ) *
                 ( 1 + erf( -( abs(y-z) - y_stddev * SQRT3 ) ) );
         }
 
-        float pdf_x = myPDF( x_dist, 0.0f, x_stddev, x-z ) + x_adjust;
-        float pdf_y = myPDF( y_dist, 0.0f, y_stddev, y-z ) + y_adjust;
+        float pdf_x = g_myPDF( x_dist, 0.0f, x_stddev, x-z ) + x_adjust;
+        float pdf_y = g_myPDF( y_dist, 0.0f, y_stddev, y-z ) + y_adjust;
 
-        p1 = pdf_x * pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
-        p2 = pdf_y * pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
+        p1 = pdf_x * g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
+        p2 = pdf_y * g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
     }
     else {
         // p(r(x)=z|x) and p(r(y)=z|y)
-        p1 = ( myPDF( x_dist, 0, x_stddev, x-z ) *
-               pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
-        p2 = ( myPDF( y_dist, 0, y_stddev, y-z ) *
-               pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
+        p1 = ( g_myPDF( x_dist, 0, x_stddev, x-z ) *
+               g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
+        p2 = ( g_myPDF( y_dist, 0, y_stddev, y-z ) *
+               g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
     }
 
     return p1 * p2;
@@ -255,7 +255,7 @@ f3 (float z, float *params)
 
 
 __device__ float
-f4 (float k, float *params)
+g_f4 (float k, float *params)
 {
     return 1.0f;
 }
@@ -263,19 +263,19 @@ f4 (float k, float *params)
 
 // With seq on global memory
 __global__ void
-distance_kernel (float *seq_GPU,
+g_distance_kernel (float *seq_GPU,
                  float *samples_GPU,
                  float *dust_GPU)
 {
     float *p_param = seq_GPU  + blockIdx.x * PARAM_SIZE;    
     float *p_dust  = dust_GPU + blockIdx.x;
 
-    dust_kernel(p_param, samples_GPU, p_dust);
+    g_dust_kernel(p_param, samples_GPU, p_dust);
 }
 
 
 __device__ void
-dust_kernel (float *params,
+g_dust_kernel (float *params,
              float *in,
              float *answer_GPU)
 {
@@ -298,9 +298,9 @@ dust_kernel (float *params,
         in1 = in[i + offset1] * RANGE_WIDTH + RANGE_MIN;
         in2 = in[i + offset2] * RANGE_WIDTH + RANGE_MIN;
         in3 = in[i + offset3] * RANGE_WIDTH + RANGE_MIN;        
-        o1 += f1( in1, params );
-        o2 += f2( in2, params );
-        o3 += f3( in3, params );
+        o1 += g_f1( in1, params );
+        o2 += g_f2( in2, params );
+        o3 += g_f3( in3, params );
     }
     
     // REDUCE PHASE
@@ -308,7 +308,7 @@ dust_kernel (float *params,
     sdata1[threadIdx.x] = o1;
     sdata2[threadIdx.x] = o2;
     sdata3[threadIdx.x] = o3;
-    reduceBlock<TPB>(sdata1, sdata2, sdata3);
+    g_reduceBlock<TPB>(sdata1, sdata2, sdata3);
 
     float r = (float)RANGE_WIDTH / INTEGRATION_SAMPLES;
 
@@ -323,7 +323,7 @@ dust_kernel (float *params,
 
 template<unsigned int blockSize>
 __device__ void
-reduceBlock (float *sdata1, float *sdata2, float *sdata3)
+g_reduceBlock (float *sdata1, float *sdata2, float *sdata3)
 {
     // make sure all threads are ready
     __syncthreads();

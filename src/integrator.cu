@@ -79,7 +79,7 @@ Integrator::distance (TimeSeries &ts1, TimeSeries &ts2, int n)
 
     
     // call kernel
-    distance_kernel<<< n, TPB >>>(seq_GPU, samples_GPU, dust_GPU);
+    g_distance_kernel<<< n, TPB >>>(seq_GPU, samples_GPU, dust_GPU);
 
     CUDA_SAFE_CALL( cudaMemcpy( dust,
                                 dust_GPU,
