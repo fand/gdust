@@ -1,3 +1,5 @@
+#pragma once
+
 #define INTEGRATION_SAMPLES 49152
 #define TPB 512
 #define BPG 96
