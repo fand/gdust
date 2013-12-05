@@ -2,6 +2,11 @@
 #include <cutil.h>
 #include "randomvariable.hpp"
 
+#include <boost/math/distributions/uniform.hpp> // for uniform distribution
+#include <boost/math/distributions/normal.hpp> // for normal distribution
+#include <boost/math/distributions/exponential.hpp> // for normal distribution
+
+
 #include <assert.h>
 
 #define NEAR(x,y) (assert( abs((x) - (y)) < 0.1 ))
@@ -10,35 +15,88 @@
 #include "kernel.cu"
 #include "dust.hpp"
 
+///////////////////////////////////////
+// Wrapers for kernel functions.
+///////////////////////////////////////
 
-__global__ void ggf1(float v, float *params, float *result){ *result = g_f1(v, params); }
-__global__ void ggf2(float v, float *params, float *result){ *result = g_f2(v, params); }
-__global__ void ggf3(float v, float *params, float *result){ *result = g_f3(v, params); }
+__global__ void gg_f1(float v, float *params, float *result){ *result = g_f1(v, params); }
+__global__ void gg_f2(float v, float *params, float *result){ *result = g_f2(v, params); }
+__global__ void gg_f3(float v, float *params, float *result){ *result = g_f3(v, params); }
+
+__global__ void
+gg_pdf_uniform (float lower, float upper, float x, float *result)
+{
+    *result = g_pdf_uniform(lower, upper, x);
+}
+
+__global__ void
+gg_pdf_normal (float mean, float sd, float x, float *result)
+{
+    *result = g_pdf_normal(mean, sd, x);
+//    *result = g_pdf_normal(mean, 1.0f, ddd);
+}
 
 
-void TestF1(float v, float *params);
-void TestF2(float v, float *params);
-void TestF3(float v, float *params);
+///////////////////////////////////////
+// Test functions' prototypes.
+///////////////////////////////////////
+
+
+void CallGF1(float v, float *params);
+void CallGF2(float v, float *params);
+void CallGF3(float v, float *params);
+
+void CallGPdfUniform(float lower, float upper, float x);
+void CallGPdfNormal(float mean, float sd, float x);
+
+
+///////////////////////////////////////
+// Main
+///////////////////////////////////////
 
 int main()
-{
-
-    for (float i = 0; i < 10; i++) {
+{    
+    // Test for (f1, f2, f3)
+    for (float i = 0; i < 10; i += 0.1) {
         float params[] = {1, 0.1, 0.1,
                           2, 0.1, 0.1};
         float v = i / 10.0f;
         
-        TestF1(v, params);
-        TestF2(v, params);
-        TestF3(v, params);
+        CallGF1(v, params);
+        CallGF2(v, params);
+        CallGF3(v, params);
     }
+    printf("Test for f1, f2, f3 passed.\n");
+    
 
+    // Test for g_pdf_uniform, g_pdf_normal
+    for (float i = -100.0; i < 100.0; i += 1.0) {
+        CallGPdfUniform(0.0, 1.0, i);
+        CallGPdfUniform(-1.0, 1.0, i);
+        CallGPdfUniform(-1.0, 0.0, i);
+        CallGPdfUniform(0.0, 0.0, i);
+        CallGPdfUniform(1.0, -1.0, i);                        
+
+        CallGPdfNormal(0.0, 1.0, i);
+        CallGPdfNormal(0.0, 1.0, i);
+        CallGPdfNormal(0.0, 3.0, i);
+        CallGPdfNormal(10.0, 3.0, i);                
+    }
+    printf("Test for g_pdf_uniform, g_pdf_normal passed.\n");    
+
+    
+    
     printf("Test passed! :D\n");
 }
 
 
+
+///////////////////////////////////////
+// Definition of Test functions.
+///////////////////////////////////////
+
 void
-TestF1(float v, float *params)
+CallGF1 (float v, float *params)
 {
     float cpu, gpu;
 
@@ -55,7 +113,7 @@ TestF1(float v, float *params)
     cudaMalloc((void**)&result_D, sizeof(float) * 1);    
 
     cudaMemcpy(params_D, params, sizeof(float) * 6, cudaMemcpyHostToDevice);
-    ggf1<<< 1, 1 >>>(v, params_D, result_D);
+    gg_f1<<< 1, 1 >>>(v, params_D, result_D);
     cudaMemcpy(&gpu, result_D, sizeof(float), cudaMemcpyDeviceToHost);
 
     NEAR(cpu, gpu);
@@ -63,7 +121,7 @@ TestF1(float v, float *params)
 
 
 void
-TestF2(float v, float *params)
+CallGF2 (float v, float *params)
 {
     float cpu, gpu;
 
@@ -80,7 +138,7 @@ TestF2(float v, float *params)
     cudaMalloc((void**)&result_D, sizeof(float) * 1);    
 
     cudaMemcpy(params_D, params, sizeof(float) * 6, cudaMemcpyHostToDevice);
-    ggf2<<< 1, 1 >>>(v, params_D, result_D);
+    gg_f2<<< 1, 1 >>>(v, params_D, result_D);
     cudaMemcpy(&gpu, result_D, sizeof(float), cudaMemcpyDeviceToHost);
 
     NEAR(cpu, gpu);
@@ -88,7 +146,7 @@ TestF2(float v, float *params)
 
 
 void
-TestF3(float v, float *params)
+CallGF3 (float v, float *params)
 {
     float cpu, gpu;
 
@@ -105,9 +163,64 @@ TestF3(float v, float *params)
     cudaMalloc((void**)&result_D, sizeof(float) * 1);    
 
     cudaMemcpy(params_D, params, sizeof(float) * 6, cudaMemcpyHostToDevice);
-    ggf3<<< 1, 1 >>>(v, params_D, result_D);
+    gg_f3<<< 1, 1 >>>(v, params_D, result_D);
     cudaMemcpy(&gpu, result_D, sizeof(float), cudaMemcpyDeviceToHost);
 
     NEAR(cpu, gpu);
 }
 
+
+void
+CallGPdfUniform (float lower, float upper, float x)
+{
+    float cpu, gpu;
+    bool is_error = false;
+    
+    // CPU
+    try {    
+        cpu = boost::math::pdf(boost::math::uniform_distribution<float>(lower, upper), x);
+    } catch (...) {
+        is_error = true;
+    }
+    
+    // GPU
+    float *result_D;
+    cudaMalloc((void**)&result_D, sizeof(float) * 1);
+    gg_pdf_uniform<<< 1, 1 >>>(lower, upper, x, result_D);
+    cudaMemcpy(&gpu, result_D, sizeof(float), cudaMemcpyDeviceToHost);
+
+    if (is_error) {
+        assert(gpu == 0.0f);
+    }
+    else {
+        NEAR(cpu, gpu);
+    }
+}
+
+
+void
+CallGPdfNormal (float mean, float sd, float x)
+{
+    float cpu, gpu;
+    bool is_error = false;
+    
+    // CPU
+    try {
+        cpu = boost::math::pdf(boost::math::normal_distribution< double >( mean, sd ), x);
+    } catch (...) {
+        is_error = true;
+    }
+    
+    // GPU
+    float *result_D;
+    cudaMalloc((void**)&result_D, sizeof(float) * 1);
+    gg_pdf_normal<<< 1, 1 >>>(mean, sd, x, result_D);
+    cudaMemcpy(&gpu, result_D, sizeof(float), cudaMemcpyDeviceToHost);
+
+    if (is_error) {        
+        assert(gpu == 0.0f);
+    }
+    else {
+        NEAR(cpu, gpu);
+    }
+}
