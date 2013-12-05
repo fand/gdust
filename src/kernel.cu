@@ -1,22 +1,6 @@
 #include "kernel.hpp"
 #include "randomvariable.hpp"
-
-
-#define PI_FLOAT 3.14159265358979323846264338327950288f
-#define VERYSMALL 1E-8
-#define SQRT3 1.73205081f
-#define RANGE_VALUE SQRT3*10
-
-#define INTEG_RANGE_MAX 16
-#define INTEG_RANGE_MIN -16
-
-#define PARAM_SIZE 6
-#define PARAM_X_DISTRIBUTION 0
-#define PARAM_X_OBSERVATION 1
-#define PARAM_X_STDDEV 2
-#define PARAM_Y_DISTRIBUTION 3
-#define PARAM_Y_OBSERVATION 4
-#define PARAM_Y_STDDEV 5
+#include "config.hpp"
 
 
 __device__ float
@@ -89,9 +73,9 @@ __device__ float
 g_f2 (float v, float *params)
 {
     float p1 = g_myPDF( params[ PARAM_Y_DISTRIBUTION ],   // distribution
-                      0.0f,                                // mean
-                      params[ PARAM_Y_STDDEV ],         // stddev
-                      params[ PARAM_Y_OBSERVATION ] - v );  // target
+                        0.0f,                                // mean
+                        params[ PARAM_Y_STDDEV ],         // stddev
+                        params[ PARAM_Y_OBSERVATION ] - v );  // target
     
     float p2 = g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
     
@@ -103,12 +87,12 @@ g_f2 (float v, float *params)
 __device__ float
 g_f3 (float z, float *params)
 {
-    int x_dist = (int)params[ PARAM_X_DISTRIBUTION ];
-    float x = params[ PARAM_X_OBSERVATION ] - 0.1f;
-    float x_stddev = params[ PARAM_X_STDDEV ];
-    int y_dist = (int)params[ PARAM_Y_DISTRIBUTION ];
-    float y = params[ PARAM_Y_OBSERVATION ] + 0.1f;
-    float y_stddev = params[ PARAM_Y_STDDEV ];
+    int   x_dist   = (int)params[ PARAM_X_DISTRIBUTION ];
+    float x        =      params[ PARAM_X_OBSERVATION ] - 0.1f;
+    float x_stddev =      params[ PARAM_X_STDDEV ];
+    int   y_dist   = (int)params[ PARAM_Y_DISTRIBUTION ];
+    float y        =      params[ PARAM_Y_OBSERVATION ] + 0.1f;
+    float y_stddev =      params[ PARAM_Y_STDDEV ];
     
     float p1, p2;
 
@@ -154,8 +138,8 @@ g_f4 (float k, float *params)
 // With seq on global memory
 __global__ void
 g_distance_kernel (float *seq_GPU,
-                 float *samples_GPU,
-                 float *dust_GPU)
+                   float *samples_GPU,
+                   float *dust_GPU)
 {
     float *p_param = seq_GPU  + blockIdx.x * PARAM_SIZE;    
     float *p_dust  = dust_GPU + blockIdx.x;
@@ -166,8 +150,8 @@ g_distance_kernel (float *seq_GPU,
 
 __device__ void
 g_dust_kernel (float *params,
-             float *in,
-             float *answer_GPU)
+               float *in,
+               float *answer_GPU)
 {
     float in1, in2, in3;
     int offset1 = blockIdx.x * INTEGRATION_SAMPLES;
@@ -203,8 +187,17 @@ g_dust_kernel (float *params,
     float r = (float)RANGE_WIDTH / INTEGRATION_SAMPLES;
 
     if (threadIdx.x == 0) {
-        float d = -log10(sdata3[0] / (sdata1[0] * sdata2[0] * r));
-        if (d < 0) d = 0.0f;
+        float int1 = sdata1[0] * r;
+        if (int1 < VERYSMALL) int1 = VERYSMALL;
+        float int2 = sdata2[0] * r;
+        if (int2 < VERYSMALL) int2 = VERYSMALL;
+        float int3 = sdata3[0] * r;
+        if (int3 < 0.0f) int3 = 0.0f;
+        
+        float d = -log10(int3 / (int1 * int2));
+        
+//        float d = -log10(sdata3[0] / (sdata1[0] * sdata2[0] * r));
+        if (d < 0.0) { d = 0.0f; }
         *answer_GPU = d;
     }
 }

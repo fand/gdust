@@ -50,6 +50,7 @@ void CallGPdfUniform(float lower, float upper, float x);
 void CallGPdfNormal(float mean, float sd, float x);
 
 
+
 ///////////////////////////////////////
 // Main
 ///////////////////////////////////////
@@ -84,6 +85,8 @@ int main()
     }
     printf("Test for g_pdf_uniform, g_pdf_normal passed.\n");    
 
+
+    
     
     
     printf("Test passed! :D\n");

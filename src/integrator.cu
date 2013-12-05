@@ -1,28 +1,15 @@
 #include "integrator.hpp"
 #include "randomvariable.hpp"
 #include "kernel.hpp"
-
-#include <math.h>
-#include <fstream>
+#include "config.hpp"
 
 #include <cutil.h>
 #include <curand.h>
 
 #include <iostream>
+#include <fstream>
+#include <math.h>
 
-
-#define VERYSMALL 1E-20
-#define SQRT3 1.73205081
-
-#define RANGE_VALUE SQRT3*10
-#define INTEG_RANGE_MAX 16
-#define INTEG_RANGE_MIN -16
-
-#define PARAM_SIZE 6
-#define INTEGRATION_SAMPLES 49152
-
-#define TPB 512
-#define BPG 96
 
 
 Integrator::~Integrator()

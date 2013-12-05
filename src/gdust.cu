@@ -8,7 +8,6 @@
 #include <fstream>
 #include <cassert>
 
-#define VERYSMALL 1E-20
 
 
 inline float

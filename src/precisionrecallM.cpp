@@ -19,13 +19,13 @@ TIMEVAL_SUB (struct timeval *a, struct timeval *b, struct timeval *result)
 
 PrecisionRecallM::PrecisionRecallM (const char *s)
 {
-    this->n = 0;
+    this->n         = 0;
     this->precision = 0;
-    this->recall = 0;
-    this->size = 0;
-    this->s = s;
-    this->t = 0;
-    this->tn = 0;
+    this->recall    = 0;
+    this->size      = 0;
+    this->s         = s;  // NOTICE!!
+    this->t         = 0;
+    this->tn        = 0;
 }
 
 
@@ -85,7 +85,7 @@ PrecisionRecallM::add (std::vector< int > &exact, std::vector< int > &estimate)
     else {
         if (estimate.size() > 0) {
             precision += count / ( ( float )estimate.size() );
-            recall += count / ( ( float )exact.size() );
+            recall    += count / ( ( float )exact.size() );
         }
 
         /*
