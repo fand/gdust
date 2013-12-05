@@ -139,23 +139,27 @@ g_pdf_uniform (float lower, float upper, float x)
     if ((x < lower) || (x > upper)) {
         return 0.0f;
     }
-
+    if (lower == x && upper == x) {
+        return 0.0f;
+    }
     return 1.0f / (upper - lower);
 }
 
 __device__ float
 g_pdf_normal (float mean, float sd, float x)
 {
-    if (isinf(x)) { return 0; }  // pdf(infinity) is zero.
+    if (isinf(x) || sd <= 0 || isinf(sd) || isinf(mean)) {
+        return 0.0f;
+    }
 
     float result = 0.0f;
 
     float exponent = x - mean;
-    exponent *= ( (-1) * exponent );
-    exponent /= ( 2 * sd * sd );
+    exponent *= -exponent;
+    exponent /= (2 * sd * sd);
 
-    result = __expf( exponent );
-    result /= sd * sqrt( 2 * PI_FLOAT );
+    result = __expf(exponent);
+    result /= sd * sqrt(2 * PI_FLOAT);
 
     return result;
 }
