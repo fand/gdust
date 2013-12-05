@@ -7,16 +7,6 @@
 #define RANGE_WIDTH 32
 
 
-__device__ bool check_uniform_lower(float lower, float *result);
-__device__ bool check_uniform_upper(float upper, float *result);
-__device__ bool check_uniform(float lower, float upper, float *result);
-__device__ bool check_uniform_x(float const& x, float *result);    
-__device__ bool check_location(float location, float * result);
-__device__ bool check_x(float x, float *result);
-__device__ bool check_scale(float scale, float *result);
-__device__ bool verify_lambda(float l, float *result);
-__device__ bool verify_exp_x(float x, float *result);
-
 __device__ float g_pdf_uniform( float lower, float upper, float x );
 __device__ float g_pdf_normal( float mean, float sd, float x );
 
