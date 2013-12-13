@@ -1,32 +1,25 @@
 #include "dust.hpp"
 #include "common.hpp"
+#include "config.hpp"
 
 #include <math.h>
 #include <iostream>
 #include <sstream>
 #include <fstream>
 
-#include <boost/math/distributions/uniform.hpp> // for uniform distribution
-#include <boost/math/distributions/normal.hpp> // for normal distribution
-#include <boost/math/distributions/exponential.hpp> // for normal distribution
+#include <boost/math/distributions/uniform.hpp>
+#include <boost/math/distributions/normal.hpp>
+#include <boost/math/distributions/exponential.hpp>
 
 using namespace boost;
 using namespace boost::math;
 
 
-#define VERYSMALL 1E-20
-#define SQRT3 1.73205081
-
-#define RANGE_VALUE SQRT3*10
-
-double integration_interval [ ] = { -16, +16 };
-
 
 inline double
 clean_probability (double p)
 {
-    if(p <= 0) p = 0;
-    return p;
+    return (p < 0.0) ? 0.0 : p;
 }
 
 
@@ -177,8 +170,8 @@ f3(double *k, size_t dim, void *params)
 double
 DUST::integrate(double (*f)(double * x_array, size_t dim, void * params), void *params)
 {
-    double xl[1] = { integration_interval[0] };
-    double xu[1] = { integration_interval[1] };
+    double xl[1] = { RANGE_MIN };
+    double xu[1] = { RANGE_MAX };
     double result, error;
 
     gsl_rng *r = gsl_rng_alloc (T);
@@ -212,9 +205,6 @@ DUST::phi(RandomVariable &x, RandomVariable &y)
     RandomVariable *pair[2];
     pair[0] = &x;
     pair[1] = &y;
-
-    integration_interval[0] = -16;
-    integration_interval[1] = +16;
 
     double int1 = clean_probability( integrate(f1, (void *)pair) );
     double int2 = clean_probability( integrate(f2, (void *)pair) );

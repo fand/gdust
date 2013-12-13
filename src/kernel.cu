@@ -1,178 +1,52 @@
 #include "kernel.hpp"
 #include "randomvariable.hpp"
-
-
-#define PI_FLOAT 3.14159265358979323846264338327950288f
-#define VERYSMALL 1E-8
-#define SQRT3 1.73205081f
-#define RANGE_VALUE SQRT3*10
-
-#define INTEG_RANGE_MAX 16
-#define INTEG_RANGE_MIN -16
-
-#define PARAM_SIZE 6
-#define PARAM_X_DISTRIBUTION 0
-#define PARAM_X_OBSERVATION 1
-#define PARAM_X_STDDEV 2
-#define PARAM_Y_DISTRIBUTION 3
-#define PARAM_Y_OBSERVATION 4
-#define PARAM_Y_STDDEV 5
-
-
-__device__ bool
-check_uniform_lower (float lower, float *result)
-{
-    if (isfinite(lower)) {
-        return true;
-    } else {
-        *result = nan("");
-        return false;
-    }
-}
-
-
-__device__ bool
-check_uniform_upper (float upper, float *result)
-{
-    if (isfinite(upper)) {
-        return true;
-    }
-    else {
-        *result = nan("");
-        return false;
-    }
-}
-
-
-__device__ bool
-check_uniform (float lower, float upper, float *result)
-{
-    if (check_uniform_lower(lower, result) == false) { return false; }
-    else if (check_uniform_upper(upper, result) == false) { return false; }
-    // If lower == upper then 1 / (upper-lower) = 1/0 = +infinity!
-    else if (lower >= upper) {
-        *result = nan("");
-        return false;
-    } else {
-        return true;
-    }
-}
-
-
-__device__ bool
-check_uniform_x (float const& x, float *result)
-{
-    if (isfinite(x)) {
-        return true;
-    } else {
-        *result = nan("");
-        return false;
-    }
-}
-    
-
-__device__ bool
-check_location (float location, float * result)
-{
-    if (!(isfinite(location))) {
-        *result = nan("");
-        return false;
-    } else {
-        return true;
-    }
-}
-
-
-__device__ bool
-check_x (float x, float *result)
-{
-    if(!(isfinite(x))) {
-        *result = nan("");
-        return false;
-    }
-    return true;
-}
-
-
-__device__ bool
-check_scale(float scale, float *result)
-{
-    if ((scale <= 0) || !(isfinite(scale))) {
-        *result = nanf("");
-        return false;
-    } else {
-        return true;
-    }
-}
-
-
-__device__ bool
-verify_lambda (float l, float *result)
-{
-    if (l <= 0) {
-        *result = nan("");
-        return false;
-    } else {
-        return true;
-    }
-}
-
-
-__device__ bool
-verify_exp_x (float x, float *result)
-{
-    if (x < 0) {
-        *result = nan("");
-        return false;
-    } else {
-        return true;
-    }
-}
-
-
-
+#include "config.hpp"
 
 
 __device__ float
-pdf_uniform (float lower, float upper, float x)
+g_pdf_uniform (float lower, float upper, float x)
 {
     if ((x < lower) || (x > upper)) {
         return 0.0f;
     }
-
+    if (lower == x && upper == x) {
+        return 0.0f;
+    }
     return 1.0f / (upper - lower);
 }
 
 __device__ float
-pdf_normal (float mean, float sd, float x)
+g_pdf_normal (float mean, float sd, float x)
 {
-    if (isinf(x)) { return 0; }  // pdf(infinity) is zero.
+    if (isinf(x) || sd <= 0 || isinf(sd) || isinf(mean)) {
+        return 0.0f;
+    }
 
     float result = 0.0f;
 
     float exponent = x - mean;
-    exponent *= ( (-1) * exponent );
-    exponent /= ( 2 * sd * sd );
+    exponent *= -exponent;
+    exponent /= (2 * sd * sd);
 
-    result = __expf( exponent );
-    result /= sd * sqrt( 2 * PI_FLOAT );
+    result = __expf(exponent);
+    result /= sd * sqrt(2 * PI_FLOAT);
 
     return result;
 }
 
 
 __device__ float
-myPDF (int distribution, float mean, float stddev, float v)
+g_myPDF (int distribution, float mean, float stddev, float v)
 {
     float ret = -1.0f;
     if (stddev == 0.0f) stddev = 0.2f;
 
     if (distribution == RANDVAR_UNIFORM) {
         float b = SQRT3 * stddev;
-        ret = pdf_uniform( -b, b, v );        
+        ret = g_pdf_uniform( -b, b, v );
     }
     else if (distribution == RANDVAR_NORMAL) {
-        ret = pdf_normal( 0, 1, v / stddev );
+        ret = g_pdf_normal( 0, 1, v / stddev );
     }
 
     return ret;
@@ -181,14 +55,14 @@ myPDF (int distribution, float mean, float stddev, float v)
 
 // calculate p(y|r(y)=v)p(r(y)=v)
 __device__ float
-f1 (float v, float *params)
+g_f1 (float v, float *params)
 {
-    float p1 = myPDF( params[ PARAM_X_DISTRIBUTION ],   // distribution
-                      0.0f,                                // mean
-                      params[ PARAM_X_STDDEV ],         // stddev
-                      params[ PARAM_X_OBSERVATION ]-v ); // target
+    float p1 = g_myPDF( params[ PARAM_X_DISTRIBUTION ],   // distribution
+                        0.0f,                                // mean
+                        params[ PARAM_X_STDDEV ],         // stddev
+                        params[ PARAM_X_OBSERVATION ]-v ); // target
      
-    float p2 = pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
+    float p2 = g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
 
     return p1 * p2;
 }
@@ -196,14 +70,14 @@ f1 (float v, float *params)
 
 // calculate p(y|r(y)=v)p(r(y)=v)
 __device__ float
-f2 (float v, float *params)
+g_f2 (float v, float *params)
 {
-    float p1 = myPDF( params[ PARAM_Y_DISTRIBUTION ],   // distribution
-                      0.0f,                                // mean
-                      params[ PARAM_Y_STDDEV ],         // stddev
-                      params[ PARAM_Y_OBSERVATION ] - v );  // target
+    float p1 = g_myPDF( params[ PARAM_Y_DISTRIBUTION ],   // distribution
+                        0.0f,                                // mean
+                        params[ PARAM_Y_STDDEV ],         // stddev
+                        params[ PARAM_Y_OBSERVATION ] - v );  // target
     
-    float p2 = pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
+    float p2 = g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
     
     return p1 * p2;
 }
@@ -211,14 +85,14 @@ f2 (float v, float *params)
 
 // p(r(x)=z|x) * p(r(y)=z|y)
 __device__ float
-f3 (float z, float *params)
+g_f3 (float z, float *params)
 {
-    int x_dist = (int)params[ PARAM_X_DISTRIBUTION ];
-    float x = params[ PARAM_X_OBSERVATION ] - 0.1f;
-    float x_stddev = params[ PARAM_X_STDDEV ];
-    int y_dist = (int)params[ PARAM_Y_DISTRIBUTION ];
-    float y = params[ PARAM_Y_OBSERVATION ] + 0.1f;
-    float y_stddev = params[ PARAM_Y_STDDEV ];
+    int   x_dist   = (int)params[ PARAM_X_DISTRIBUTION ];
+    float x        =      params[ PARAM_X_OBSERVATION ] - 0.1f;
+    float x_stddev =      params[ PARAM_X_STDDEV ];
+    int   y_dist   = (int)params[ PARAM_Y_DISTRIBUTION ];
+    float y        =      params[ PARAM_Y_OBSERVATION ] + 0.1f;
+    float y_stddev =      params[ PARAM_Y_STDDEV ];
     
     float p1, p2;
 
@@ -227,27 +101,27 @@ f3 (float z, float *params)
         float y_adjust = 0;
 
         if (abs(x-z) > x_stddev * SQRT3) {
-            x_adjust = myPDF( x_dist, 0, x_stddev, 0 ) *
+            x_adjust = g_myPDF( x_dist, 0, x_stddev, 0 ) *
                 ( 1 + erf( -( abs(x-z) - x_stddev * SQRT3 ) ) );
         }
         
         if (abs(y-z) > y_stddev * SQRT3) {
-            y_adjust = myPDF( y_dist, 0, y_stddev, 0 ) *
+            y_adjust = g_myPDF( y_dist, 0, y_stddev, 0 ) *
                 ( 1 + erf( -( abs(y-z) - y_stddev * SQRT3 ) ) );
         }
 
-        float pdf_x = myPDF( x_dist, 0.0f, x_stddev, x-z ) + x_adjust;
-        float pdf_y = myPDF( y_dist, 0.0f, y_stddev, y-z ) + y_adjust;
+        float pdf_x = g_myPDF( x_dist, 0.0f, x_stddev, x-z ) + x_adjust;
+        float pdf_y = g_myPDF( y_dist, 0.0f, y_stddev, y-z ) + y_adjust;
 
-        p1 = pdf_x * pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
-        p2 = pdf_y * pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
+        p1 = pdf_x * g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
+        p2 = pdf_y * g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
     }
     else {
         // p(r(x)=z|x) and p(r(y)=z|y)
-        p1 = ( myPDF( x_dist, 0, x_stddev, x-z ) *
-               pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
-        p2 = ( myPDF( y_dist, 0, y_stddev, y-z ) *
-               pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
+        p1 = ( g_myPDF( x_dist, 0, x_stddev, x-z ) *
+               g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
+        p2 = ( g_myPDF( y_dist, 0, y_stddev, y-z ) *
+               g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
     }
 
     return p1 * p2;
@@ -255,7 +129,7 @@ f3 (float z, float *params)
 
 
 __device__ float
-f4 (float k, float *params)
+g_f4 (float k, float *params)
 {
     return 1.0f;
 }
@@ -263,21 +137,21 @@ f4 (float k, float *params)
 
 // With seq on global memory
 __global__ void
-distance_kernel (float *seq_GPU,
-                 float *samples_GPU,
-                 float *dust_GPU)
+g_distance_kernel (float *seq_GPU,
+                   float *samples_GPU,
+                   float *dust_GPU)
 {
     float *p_param = seq_GPU  + blockIdx.x * PARAM_SIZE;    
     float *p_dust  = dust_GPU + blockIdx.x;
 
-    dust_kernel(p_param, samples_GPU, p_dust);
+    g_dust_kernel(p_param, samples_GPU, p_dust);
 }
 
 
 __device__ void
-dust_kernel (float *params,
-             float *in,
-             float *answer_GPU)
+g_dust_kernel (float *params,
+               float *in,
+               float *answer_GPU)
 {
     float in1, in2, in3;
     int offset1 = blockIdx.x * INTEGRATION_SAMPLES;
@@ -298,9 +172,9 @@ dust_kernel (float *params,
         in1 = in[i + offset1] * RANGE_WIDTH + RANGE_MIN;
         in2 = in[i + offset2] * RANGE_WIDTH + RANGE_MIN;
         in3 = in[i + offset3] * RANGE_WIDTH + RANGE_MIN;        
-        o1 += f1( in1, params );
-        o2 += f2( in2, params );
-        o3 += f3( in3, params );
+        o1 += g_f1( in1, params );
+        o2 += g_f2( in2, params );
+        o3 += g_f3( in3, params );
     }
     
     // REDUCE PHASE
@@ -308,13 +182,22 @@ dust_kernel (float *params,
     sdata1[threadIdx.x] = o1;
     sdata2[threadIdx.x] = o2;
     sdata3[threadIdx.x] = o3;
-    reduceBlock<TPB>(sdata1, sdata2, sdata3);
+    g_reduceBlock<TPB>(sdata1, sdata2, sdata3);
 
     float r = (float)RANGE_WIDTH / INTEGRATION_SAMPLES;
 
     if (threadIdx.x == 0) {
-        float d = -log10(sdata3[0] / (sdata1[0] * sdata2[0] * r));
-        if (d < 0) d = 0.0f;
+        float int1 = sdata1[0] * r;
+        if (int1 < VERYSMALL) int1 = VERYSMALL;
+        float int2 = sdata2[0] * r;
+        if (int2 < VERYSMALL) int2 = VERYSMALL;
+        float int3 = sdata3[0] * r;
+        if (int3 < 0.0f) int3 = 0.0f;
+        
+        float d = -log10(int3 / (int1 * int2));
+        
+//        float d = -log10(sdata3[0] / (sdata1[0] * sdata2[0] * r));
+        if (d < 0.0) { d = 0.0f; }
         *answer_GPU = d;
     }
 }
@@ -323,7 +206,7 @@ dust_kernel (float *params,
 
 template<unsigned int blockSize>
 __device__ void
-reduceBlock (float *sdata1, float *sdata2, float *sdata3)
+g_reduceBlock (float *sdata1, float *sdata2, float *sdata3)
 {
     // make sure all threads are ready
     __syncthreads();

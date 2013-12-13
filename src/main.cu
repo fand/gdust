@@ -1,3 +1,16 @@
+#include "main.hpp"
+#include "dataset.hpp"
+#include "common.hpp"
+#include "timeseries.hpp"
+#include "timeseriescollection.hpp"
+#include "precisionrecallM.hpp"
+#include "euclidean.hpp"
+#include "dust.hpp"
+#include "gdust.hpp"
+#include "watch.hpp"
+#include "config.hpp"
+
+#include <cutil.h>
 #include <limits>
 #include <iostream>
 #include <stdio.h>
@@ -8,34 +21,21 @@
 extern char *optarg;
 extern int optind, optopt, opterr;
 
-#include "main.hpp"
-#include "dataset.hpp"
-#include "common.hpp"
-#include "timeseries.hpp"
-#include "timeseriescollection.hpp"
-#include "euclidean.hpp"
-#include "precisionrecallM.hpp"
-
-#include "watch.hpp"
-
-#include "dust.hpp"
-#include "gdust.hpp"
-
-#include <cutil.h>
-
 OPT o;
 
 #define LOOKUPTABLES_PATHNAME "lookuptablesMixed"
 
 
-int main( int argc, char **argv );
-void initOpt( int argc, char **argv );
-void checkDistance( int argc, char **argv );
+
+int  main (int argc, char **argv);
+void initOpt (int argc, char **argv);
+void checkDistance (int argc, char **argv);
 void cleanUp();
 
-void exp1( int argc, char **argv );
-void exp2( int argc, char **argv );
-void exp3( int argc, char **argv );
+void exp1 (int argc, char **argv);
+void exp2 (int argc, char **argv);
+void exp3 (int argc, char **argv);
+
 
 
 int
@@ -45,8 +45,6 @@ main (int argc, char **argv)
     std::cout.precision( 4 );
     std::cerr.precision( 4 );
 
-    std::cout << "samples: " << INTEGRATION_SAMPLES << std::endl;
-    
     // checkDistance( argc, argv );
 
     exp3( argc, argv );

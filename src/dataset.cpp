@@ -1,15 +1,16 @@
 #include "dataset.hpp"
 #include "common.hpp"
 
-#include <boost/random.hpp>
-#include <boost/random/normal_distribution.hpp>
-
 #include <assert.h>
 #include <iostream>
 #include <sstream>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <errno.h>
+
+#include <boost/random.hpp>
+#include <boost/random/normal_distribution.hpp>
+
 
 
 DataSet::DataSet(){}
@@ -145,7 +146,6 @@ DataSet::perturbateNormal (float mu, float sigma)
     boost::mt19937 rng( static_cast< unsigned >( time(0) ) );
     boost::normal_distribution<> nd( mu, sigma );
 
-//    boost::variate_generator< boost::mt19937&, boost::normal_distribution<> > drawSample( rng, nd );
     boost::variate_generator< boost::mt19937, boost::normal_distribution<> > drawSample( rng, nd );    
 
     std::cerr << "adding perturbation (normal) ..." << std::endl;
