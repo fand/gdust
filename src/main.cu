@@ -1,3 +1,16 @@
+#include "main.hpp"
+#include "dataset.hpp"
+#include "common.hpp"
+#include "timeseries.hpp"
+#include "timeseriescollection.hpp"
+#include "precisionrecallM.hpp"
+#include "euclidean.hpp"
+#include "dust.hpp"
+#include "gdust.hpp"
+#include "watch.hpp"
+#include "config.hpp"
+
+#include <cutil.h>
 #include <limits>
 #include <iostream>
 #include <stdio.h>
@@ -8,43 +21,30 @@
 extern char *optarg;
 extern int optind, optopt, opterr;
 
-#include "main.hpp"
-#include "dataset.hpp"
-#include "common.hpp"
-#include "timeseries.hpp"
-#include "timeseriescollection.hpp"
-#include "euclidean.hpp"
-#include "precisionrecallM.hpp"
-
-#include "watch.hpp"
-
-#include "dust.hpp"
-#include "gdust.hpp"
-
-#include <cutil.h>
-
 OPT o;
 
 #define LOOKUPTABLES_PATHNAME "lookuptablesMixed"
 
 
-int main( int argc, char **argv );
-void initOpt( int argc, char **argv );
-void checkDistance( int argc, char **argv );
+
+int  main (int argc, char **argv);
+void initOpt (int argc, char **argv);
+void checkDistance (int argc, char **argv);
 void cleanUp();
 
-void exp1( int argc, char **argv );
-void exp2( int argc, char **argv );
-void exp3( int argc, char **argv );
+void exp1 (int argc, char **argv);
+void exp2 (int argc, char **argv);
+void exp3 (int argc, char **argv);
 
-int main( int argc, char **argv )
+
+
+int
+main (int argc, char **argv)
 {
     initOpt( argc, argv );
     std::cout.precision( 4 );
     std::cerr.precision( 4 );
 
-    std::cout << "samples: " << INTEGRATION_SAMPLES << std::endl;
-    
     // checkDistance( argc, argv );
 
     exp3( argc, argv );
@@ -53,7 +53,8 @@ int main( int argc, char **argv )
 }
 
 
-void checkDistance( int argc, char **argv )
+void
+checkDistance (int argc, char **argv)
 {
 
     TimeSeriesCollection db( argv[1], 2, -1 ); // distribution is normal
@@ -107,7 +108,8 @@ void checkDistance( int argc, char **argv )
 }
 
 
-void exp1( int argc, char **argv )
+void
+exp1 (int argc, char **argv)
 {
     for (int t = 0; t < 10; t++) {
         char filename[50];
@@ -155,7 +157,9 @@ void exp1( int argc, char **argv )
 
 }
 
-void exp2( int argc, char **argv )
+
+void
+exp2 (int argc, char **argv)
 {
 
     TimeSeriesCollection db( argv[1], 2, -1 ); // distribution is normal
@@ -181,7 +185,6 @@ void exp2( int argc, char **argv )
         double dustdist = dust.distance( ts1, ts2, -1 );
         watch.stop();
         time_cpu += watch.getInterval();
-        // std::cout << "time_cpu: " << time_cpu << std::endl;
     }
         
     std::cout << "gpu: " << time_gpu / 10 << std::endl;
@@ -189,7 +192,9 @@ void exp2( int argc, char **argv )
 
 }
 
-void exp3( int argc, char **argv )
+
+void
+exp3 (int argc, char **argv)
 {
 
     for (int t = 50; t <= 500; t += 50) {
@@ -236,7 +241,8 @@ void exp3( int argc, char **argv )
 }
 
 
-void cleanUp()
+void
+cleanUp()
 {
     SAFE_FREE( o.rfileCollection );
     SAFE_FREE( o.rfileQuery );
@@ -245,7 +251,8 @@ void cleanUp()
 }
 
 
-void  initOpt( int argc, char **argv )
+void
+initOpt (int argc, char **argv)
 {
     int c;
 
@@ -258,8 +265,7 @@ void  initOpt( int argc, char **argv )
 
     opterr = 0;
 
-    while ( ( c = getopt( argc, argv, "C:Q:q:w:" ) ) != EOF )
-    {
+    while ((c = getopt( argc, argv, "C:Q:q:w:" )) != EOF) {
         switch (c)
         {
         case 'C':

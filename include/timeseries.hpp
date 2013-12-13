@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+
 class TimeSeries
 {
 public:
@@ -15,7 +16,7 @@ public:
     void readFile( const char *path, int distribution );
     void readString( std::string &s, int distribution );
     RandomVariable at( int index );
-//    RandomVariable * at_GPU( int index );
+    
     unsigned int length();
     int getId();
     void setId( int newId );

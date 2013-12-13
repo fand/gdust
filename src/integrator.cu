@@ -1,29 +1,14 @@
 #include "integrator.hpp"
 #include "randomvariable.hpp"
 #include "kernel.hpp"
-
-#include <math.h>
-#include <fstream>
+#include "config.hpp"
 
 #include <cutil.h>
 #include <curand.h>
 
 #include <iostream>
-
-
-
-#define VERYSMALL 1E-20
-#define SQRT3 1.73205081
-
-#define RANGE_VALUE SQRT3*10
-#define INTEG_RANGE_MAX 16
-#define INTEG_RANGE_MIN -16
-
-#define PARAM_SIZE 6
-#define INTEGRATION_SAMPLES 49152
-
-#define TPB 512
-#define BPG 96
+#include <fstream>
+#include <math.h>
 
 
 Integrator::~Integrator()
@@ -42,7 +27,8 @@ Integrator::Integrator()
 }
 
 
-float Integrator::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
+float
+Integrator::distance (TimeSeries &ts1, TimeSeries &ts2, int n)
 {
     size_t seq_size  = sizeof(float) * n * PARAM_SIZE;
     size_t dust_size = sizeof(float) * n;
@@ -79,7 +65,7 @@ float Integrator::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
 
     
     // call kernel
-    distance_kernel<<< n, TPB >>>(seq_GPU, samples_GPU, dust_GPU);
+    g_distance_kernel<<< n, TPB >>>(seq_GPU, samples_GPU, dust_GPU);
 
     CUDA_SAFE_CALL( cudaMemcpy( dust,
                                 dust_GPU,
@@ -102,4 +88,3 @@ float Integrator::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
     
     return sqrt(dist);
 }
-

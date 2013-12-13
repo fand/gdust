@@ -56,4 +56,29 @@ trailer:
 clean:
 	@rm -rf src/*.o *.dSYM $(APPNAME)
 
+
+
+# For TEST
+T_FLAGS	= -Iinclude -Isrc 
+T_LIBS	= -lcutil -lcurand -lgsl -lgslcblas
+T_APPNAME = bin/test
+
+T_CU	= $(wildcard t/*.cu)
+T_CPP	= $(wildcard t/*.cpp)
+T_OBJ	= $(addsuffix .o, $(basename $(T_CU))) $(addsuffix .o, $(basename $(T_CPP)))
+C_OBJ	= $(filter-out %main.o, $(filter-out %kernel.o, $(OBJ)))
+
+
+%.o: %.cu
+	@echo Compiling: "$@ ( $< )"
+	@$(CXX) $(T_FLAGS) -c -o $@ $<
+
+%.o: %.cpp
+	@echo Compiling: "$@ ( $< )"
+	@$(CXX) $(T_FLAGS) -c -o $@ $<
+
+
+test: $(T_OBJ) $(OBJ)
+	@$(CXX) $(T_FLAGS) $(T_OBJ) $(C_OBJ) -o $(T_APPNAME) $(T_LIBS) 
+
 # eof

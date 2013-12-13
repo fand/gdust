@@ -53,8 +53,6 @@ bool NOTNANINF( T x )
 }
 
 
-
-
 template< class T >
 bool POSITIVE0( T x )
 {
@@ -72,4 +70,3 @@ std::string TO_STR( T x )
 
 
 #define uint unsigned int
-

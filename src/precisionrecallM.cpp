@@ -4,41 +4,41 @@
 #include <math.h>
 
 
-
-void TIMEVAL_SUB( struct timeval *a, struct timeval *b, struct timeval *result )
+void
+TIMEVAL_SUB (struct timeval *a, struct timeval *b, struct timeval *result)
 {
     result->tv_sec = a->tv_sec - b->tv_sec;       
     result->tv_usec = a->tv_usec - b->tv_usec;
     
-    if( result->tv_usec < 0 )
-    {
+    if (result->tv_usec < 0) {
         result->tv_sec--;                                
         result->tv_usec += 1000000;                         
     }                                                  
 }
 
 
-
-PrecisionRecallM::PrecisionRecallM( const char *s )
+PrecisionRecallM::PrecisionRecallM (const char *s)
 {
-    this->n = 0;
+    this->n         = 0;
     this->precision = 0;
-    this->recall = 0;
-    this->size = 0;
-    this->s = s;
-    this->t = 0;
-    this->tn = 0;
+    this->recall    = 0;
+    this->size      = 0;
+    this->s         = s;  // NOTICE!!
+    this->t         = 0;
+    this->tn        = 0;
 }
 
 
-void PrecisionRecallM::addStartTime()
+void
+PrecisionRecallM::addStartTime()
 {
     gettimeofday( &begin, NULL );
     tn++;
 }
 
 
-void PrecisionRecallM::addStopTime()
+void
+PrecisionRecallM::addStopTime()
 {
     struct timeval end, elapsed;
 
@@ -49,14 +49,13 @@ void PrecisionRecallM::addStopTime()
 }
 
 
-void PrecisionRecallM::add( std::vector< int > &exact, std::vector< int > &estimate )
+void
+PrecisionRecallM::add (std::vector< int > &exact, std::vector< int > &estimate)
 {
     this->n++;
 
-    if( estimate.size() ==0 )
-    {
-        if( exact.size() == 0 )
-        {
+    if (estimate.size() ==0) {
+        if (exact.size() == 0) {
             precision++;
             recall++;
         }
@@ -64,12 +63,9 @@ void PrecisionRecallM::add( std::vector< int > &exact, std::vector< int > &estim
     }
 
     float count = 0;
-    for( unsigned int i = 0; i < exact.size(); i++ )
-    {
-        for( unsigned int j = 0; j < estimate.size(); j++ )
-        {
-            if( exact[i] == estimate[j] )
-            {
+    for (unsigned int i = 0; i < exact.size(); i++) {
+        for (unsigned int j = 0; j < estimate.size(); j++) {
+            if (exact[i] == estimate[j]) {
                 count++;
                 break;
             }
@@ -78,22 +74,18 @@ void PrecisionRecallM::add( std::vector< int > &exact, std::vector< int > &estim
 
     size += exact.size();
 
-    if( exact.size() == 0 )
-    {
-        if( estimate.size() == 0 )
-        {
+    if (exact.size() == 0) {
+        if (estimate.size() == 0) {
             precision++;
             recall++;
             //precision += 1;
             //recall +=1;
         }
     }
-    else
-    {
-        if( estimate.size() > 0 )
-        {
+    else {
+        if (estimate.size() > 0) {
             precision += count / ( ( float )estimate.size() );
-            recall += count / ( ( float )exact.size() );
+            recall    += count / ( ( float )exact.size() );
         }
 
         /*
@@ -104,19 +96,22 @@ void PrecisionRecallM::add( std::vector< int > &exact, std::vector< int > &estim
 }
 
 
-float PrecisionRecallM::getPrecision()
+float
+PrecisionRecallM::getPrecision()
 {
     return ( this->precision / this->n );
 }
 
 
-float PrecisionRecallM::getRecall()
+float
+PrecisionRecallM::getRecall()
 {
     return ( this->recall / this->n );
 }
 
 
-float PrecisionRecallM::getF1()
+float
+PrecisionRecallM::getF1()
 {
     float p = this->precision / this->n;
     float r = this->recall / this->n;
@@ -124,13 +119,15 @@ float PrecisionRecallM::getF1()
 }
 
 
-void PrecisionRecallM::print()
+void
+PrecisionRecallM::print()
 {
     std::cout << s << " (precision recall F1 n) = " << getPrecision() << " " << getRecall() << " " << getF1() << " " << (size/n) << std::endl;
 }
 
 
-float PrecisionRecallM::getTime()
+float
+PrecisionRecallM::getTime()
 {
     return ( this->t / this->tn );
 }
