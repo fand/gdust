@@ -2,7 +2,6 @@
 
 #define INTEGRATION_SAMPLES 49152
 #define TPB 512
-#define BPG 96
 
 #define RANGE_MIN  -16
 #define RANGE_MAX   16
