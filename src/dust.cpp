@@ -14,12 +14,40 @@
 using namespace boost;
 using namespace boost::math;
 
+#define PI_DOUBLE 3.14159265358979323846264338327950288
 
 
-inline double
-clean_probability (double p)
+// Probabilities
+double
+c_pdf_uniform (double lower, double upper, double x)
 {
-    return (p < 0.0) ? 0.0 : p;
+    if ((x < lower) || (x > upper)) {
+        return 0.0;
+    }
+    if (lower == x && upper == x) {
+        return 0.0;
+    }
+    return 1.0 / (upper - lower);
+}
+
+
+double
+c_pdf_normal (double mean, double sd, double x)
+{
+    if (isinf(x) || sd <= 0 || isinf(sd) || isinf(mean)) {
+        return 0.0f;
+    }
+
+    double result = 0.0;
+
+    double exponent = x - mean;
+    exponent *= -exponent;
+    exponent /= (2 * sd * sd);
+
+    result = exp(exponent);
+    result /= sd * sqrt(2 * PI_DOUBLE);
+
+    return result;
 }
 
 
@@ -27,43 +55,24 @@ double
 myPDF (int distribution, double mean, double stddev, double v)
 {
     double ret = -1.0;
-    if (stddev == 0) stddev = 0.2;
+    if (stddev == 0.0f) stddev = 0.2;
 
-    assert( mean == 0 );
-
-    switch( distribution )
-    {
-    case RANDVAR_UNIFORM:
-        {
-            double b = SQRT3 * stddev;
-            ret = boost::math::pdf(
-                boost::math::uniform_distribution< double >( -b, b ), // dist, x
-                v
-            );
-        }
-        break;
-    case RANDVAR_NORMAL:
-        {
-            ret = boost::math::pdf(
-                boost::math::normal_distribution< double >( 0, 1 ),
-                v / stddev
-            );
-        }
-        break;
-    case RANDVAR_EXP:
-        {
-            ret = boost::math::pdf(
-                boost::math::exponential_distribution< double >( 1.0 / stddev ),
-                ABS(v)
-            );
-        }
-        break;
-    default:
-        std::cout << "distribution error : " << distribution << std::endl;
-        assert( "OMG!" && distribution );
+    if (distribution == RANDVAR_UNIFORM) {
+        double b = SQRT3 * stddev;
+        ret = c_pdf_uniform( -b, b, v );
+    }
+    else if (distribution == RANDVAR_NORMAL) {
+        ret = c_pdf_normal( 0, 1, v / stddev );
     }
 
     return ret;
+}
+
+
+inline double
+clean_probability (double p)
+{
+    return (p < 0.0) ? 0.0 : p;
 }
 
 

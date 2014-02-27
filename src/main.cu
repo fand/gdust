@@ -48,8 +48,8 @@ main (int argc, char **argv)
     // checkDistance( argc, argv );
 
     // exp1( argc, argv );
-    // exp2( argc, argv );
-    exp3( argc, argv );    
+    exp2( argc, argv );
+    // exp3( argc, argv );    
     
     cleanUp();
 }
@@ -169,8 +169,10 @@ exp2 (int argc, char **argv)
             
         for (int i = 0; i < 9; i++) {
             for (int j = i; j < 10; j++) {
-                TimeSeries &ts1 = db.sequences[rand() % (int)(100)];
-                TimeSeries &ts2 = db.sequences[rand() % (int)(100)];
+                // TimeSeries &ts1 = db.sequences[rand() % (int)(100)];
+                // TimeSeries &ts2 = db.sequences[rand() % (int)(100)];
+                TimeSeries &ts1 = db.sequences[i];
+                TimeSeries &ts2 = db.sequences[j];
 
                 watch.start();
                 double gdustdist = gdust.distance( ts1, ts2, -1 );
