@@ -40,6 +40,7 @@ public:
     double phi  (RandomVariable &x, RandomVariable &y);
 
     double distance (TimeSeries &ts1, TimeSeries &ts2, int n = -1);
+    double c_distance (TimeSeries &ts1, TimeSeries &ts2, int n);
     double dtw      (TimeSeries &ts1, TimeSeries &ts2);
 
     std::vector<int> rangeQuery (TimeSeries ts, double threshold);    

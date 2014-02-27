@@ -7,67 +7,14 @@
 #include <sstream>
 #include <fstream>
 
-#include <boost/math/distributions/uniform.hpp>
-#include <boost/math/distributions/normal.hpp>
-#include <boost/math/distributions/exponential.hpp>
+#include "tbb/parallel_for.h"
+#include "tbb/blocked_range.h"
+#include "tbb/task_scheduler_init.h"
+#include "tbb/tick_count.h"
 
-using namespace boost;
-using namespace boost::math;
+#include <cassert>
 
-#define PI_DOUBLE 3.14159265358979323846264338327950288
-
-
-// Probabilities
-double
-c_pdf_uniform (double lower, double upper, double x)
-{
-    if ((x < lower) || (x > upper)) {
-        return 0.0;
-    }
-    if (lower == x && upper == x) {
-        return 0.0;
-    }
-    return 1.0 / (upper - lower);
-}
-
-
-double
-c_pdf_normal (double mean, double sd, double x)
-{
-    if (isinf(x) || sd <= 0 || isinf(sd) || isinf(mean)) {
-        return 0.0f;
-    }
-
-    double result = 0.0;
-
-    double exponent = x - mean;
-    exponent *= -exponent;
-    exponent /= (2 * sd * sd);
-
-    result = exp(exponent);
-    result /= sd * sqrt(2 * PI_DOUBLE);
-
-    return result;
-}
-
-
-double
-myPDF (int distribution, double mean, double stddev, double v)
-{
-    double ret = -1.0;
-    if (stddev == 0.0f) stddev = 0.2;
-
-    if (distribution == RANDVAR_UNIFORM) {
-        double b = SQRT3 * stddev;
-        ret = c_pdf_uniform( -b, b, v );
-    }
-    else if (distribution == RANDVAR_NORMAL) {
-        ret = c_pdf_normal( 0, 1, v / stddev );
-    }
-
-    return ret;
-}
-
+#include "ckernel.hpp"
 
 inline double
 clean_probability (double p)
@@ -77,125 +24,27 @@ clean_probability (double p)
 
 
 double
-f4(double *k, size_t dim, void *params)
+DUST::c_distance (TimeSeries &ts1, TimeSeries &ts2, int n)
 {
-    return 1.0;
-}
+    double dist = 0;
 
+    for (int i=0; i < n; i++) {
+        RandomVariable x = ts1.at(i);
+        RandomVariable y = ts2.at(i);
 
-double
-f1(double *k, size_t dim, void *params)
-{
-    RandomVariable **pair = (RandomVariable **)params;
+        double params[] = {
+            x.distribution,
+            x.observation,
+            x.stddev,
+            y.distribution,
+            y.observation,
+            y.stddev
+        };
 
-    assert( dim == 1 );
-    assert( pair[0]->stddev >= 0 );
-
-    double x = pair[0]->observation;
-    double v = k[0];
-
-    // "uniform" is "boost::math::uniform_distribution<double>"
-    uniform valueUniform( -RANGE_VALUE, RANGE_VALUE );
-    double ret = myPDF( pair[0]->distribution, 0, pair[0]->stddev, x-v ) * pdf( valueUniform, v );
-    assert( NOTNANINF(ret) );
-    return ret;
-}
-
-
-double
-f2(double *k, size_t dim, void *params)
-{
-    RandomVariable **pair = (RandomVariable **)params;
-
-    assert( dim == 1 );
-    assert( pair[1]->stddev >= 0 );
-
-    double y = pair[1]->observation;
-    double v = k[0];
-
-    uniform valueUniform(-RANGE_VALUE, RANGE_VALUE);
-    double ret = myPDF( pair[1]->distribution, 0, pair[1]->stddev, y-v ) * pdf( valueUniform, v );
-    assert( NOTNANINF(ret) );
-    return ret;
-}
-
-
-double
-f3(double *k, size_t dim, void *params)
-{
-    double *fp = (double *)params;
-
-    assert( dim == 1 );
-
-    double int1     = fp[0];
-    double int2     = fp[1];
-    int xdistrib    = (int)fp[2];
-    double x        = fp[3] - 0.1;
-    double xstddev  = fp[4];
-    int ydistrib    = (int)fp[5];
-    double y        = fp[6] + 0.1;
-    double ystddev  = fp[7];
-    double z        = k[0];
-
-    uniform valueUniform(-RANGE_VALUE, RANGE_VALUE);
-
-    assert( xstddev >= 0 );
-    assert( ystddev >= 0 );
-    assert( int1 != 0 && int2 != 0 );
-
-    long double p1, p2;
-
-    if (xdistrib == RANDVAR_UNIFORM) {
-        double xadjust = 0;
-        double yadjust = 0;
-
-        if (ABS(x-z) > xstddev * SQRT3) {
-            xadjust = myPDF(xdistrib, 0, xstddev, 0) * (1 + boost::math::erf( -( ABS(x-z) - xstddev * SQRT3) ));
-        }
-        
-        if( ABS(y-z) > ystddev * SQRT3 ) {
-            yadjust = myPDF( ydistrib, 0, ystddev, 0 ) *
-                ( 1 + boost::math::erf( -( ABS(y-z) - ystddev * SQRT3 ) ) );
-        }
-
-        double pdfx = myPDF( xdistrib, 0, xstddev, x-z ) + xadjust;
-        double pdfy = myPDF( ydistrib, 0, ystddev, y-z ) + yadjust;
-
-        p1 = pdfx * pdf( valueUniform, z ) / int1;
-        p2 = pdfy * pdf( valueUniform, z ) / int2;
-    }
-    else {
-        p1 = myPDF( xdistrib, 0, xstddev, x-z ) * pdf( valueUniform, z ) / int1;
-        p2 = myPDF( ydistrib, 0, ystddev, y-z ) * pdf( valueUniform, z ) / int2;
+        dist += c_dust_kernel(params, i);
     }
 
-    long double ret = p1 * p2;
-
-    assert( NOTNANINF(ret) );
-    return ret;
-}
-
-
-double
-DUST::integrate(double (*f)(double * x_array, size_t dim, void * params), void *params)
-{
-    double xl[1] = { RANGE_MIN };
-    double xu[1] = { RANGE_MAX };
-    double result, error;
-
-    gsl_rng *r = gsl_rng_alloc (T);
-    gsl_monte_function G = { f, 1, params };
-
-    gsl_rng_env_setup ();
-    size_t calls = INTEGRATION_SAMPLES;
-
-    gsl_monte_plain_state *s = gsl_monte_plain_alloc (1);
-    gsl_monte_plain_integrate( &G, xl, xu, 1, calls, r_rng, s, &result, &error );
-    gsl_monte_plain_free (s);
-    gsl_rng_free(r);
-
-    assert( NOTNANINF(result) );
-    return result;
+    return sqrt(dist);
 }
 
 
@@ -211,44 +60,45 @@ DUST::init()
 double
 DUST::phi(RandomVariable &x, RandomVariable &y)
 {
-    RandomVariable *pair[2];
-    pair[0] = &x;
-    pair[1] = &y;
+    // RandomVariable *pair[2];
+    // pair[0] = &x;
+    // pair[1] = &y;
 
-    double int1 = clean_probability( integrate(f1, (void *)pair) );
-    double int2 = clean_probability( integrate(f2, (void *)pair) );
+    // double int1 = clean_probability( this->integrate(c_f1, (void *)pair) );
+    // double int2 = clean_probability( this->integrate(c_f2, (void *)pair) );
 
-    if (int1 == 0) { int1 = VERYSMALL; }
-    if (int2 == 0) { int2 = VERYSMALL; }
+    // if (int1 == 0) { int1 = VERYSMALL; }
+    // if (int2 == 0) { int2 = VERYSMALL; }
 
-    assert( int1 <= 1 );
-    assert( int2 <= 1 );    
-    assert( int1 != 0 && int2 != 0 );
+    // assert( int1 <= 1 );
+    // assert( int2 <= 1 );
+    // assert( int1 != 0 && int2 != 0 );
 
-    double params[8] = {
-        int1,
-        int2,
-        x.distribution,
-        x.observation,
-        x.stddev,
-        y.distribution,
-        y.observation,
-        y.stddev
-    };
+    // double params[8] = {
+    //     int1,
+    //     int2,
+    //     x.distribution,
+    //     x.observation,
+    //     x.stddev,
+    //     y.distribution,
+    //     y.observation,
+    //     y.stddev
+    // };
 
-    double int3 = integrate( f3, ( void * )params );
-    int3 = clean_probability( int3 );
+    // double int3 = integrate( c_f3, ( void * )params );
+    // int3 = clean_probability( int3 );
 
-    if (int3 == 0) {
-        std::cerr << "dust:" << std::endl;
-        std::cerr << "int1:" << int1 << " int2:" << int2 << " int3:" << int3 << std::endl;
-        std::cerr << "x : " << x.distribution << " : " << x.observation << " : " << x.stddev << std::endl;
-        std::cerr << "y : " << y.distribution << " : " << y.observation << " : " << y.stddev << std::endl;
-        // exit(0);
-    }
+    // if (int3 == 0) {
+    //     std::cerr << "dust:" << std::endl;
+    //     std::cerr << "int1:" << int1 << " int2:" << int2 << " int3:" << int3 << std::endl;
+    //     std::cerr << "x : " << x.distribution << " : " << x.observation << " : " << x.stddev << std::endl;
+    //     std::cerr << "y : " << y.distribution << " : " << y.observation << " : " << y.stddev << std::endl;
+    //     // exit(0);
+    // }
 
-    assert( NOTNANINF(int3) );
-    return int3;
+    // assert( NOTNANINF(int3) );
+    // return int3;
+    return 0;
 }
 
 
@@ -260,7 +110,7 @@ DUST::~DUST()
 
 DUST::DUST(TimeSeriesCollection &collection, const char *lookUpTablesPath)
 {
-    this->collection = collection;    
+    this->collection = collection;
     this->init();
 
     if (lookUpTablesPath) {
@@ -276,13 +126,13 @@ DUST::rangeQuery( TimeSeries ts, double threshold )
 
     for (unsigned int i = 0; i < collection.sequences.size(); i++) {
         std::cout << "rangeQuery loop " << i << ", length " << ts.length() << std::endl;
-        
+
         double dist = 0;
         for (unsigned int j = 0; j < ts.length(); j++) {
             RandomVariable a = ts.at(j);
             RandomVariable b = collection.sequences[i].at(j);
             dist += pow( dust( a, b ), 2 );
-            
+
             if (dist > threshold * threshold) {
                 break;
             }
@@ -300,26 +150,14 @@ DUST::rangeQuery( TimeSeries ts, double threshold )
 double
 DUST::distance(TimeSeries &ts1, TimeSeries &ts2, int n)
 {
-    double dist = 0;
-    if( n == -1 ) n = ts1.length();
-    if(n > ts2.length()) n = ts2.length();        
-
-    for (int i = 0; i < n; i++) {
-        RandomVariable a = ts1.at(i);
-        RandomVariable b = ts2.at(i);
-        double du = dust( a, b );
-        
-        if ( du > 1000000000 ) {
-            std::cout << "toooo big dust!" << std::endl;
-            std::cout << du << std::endl;
-            exit(0);
-        }
-        
-        dist += pow( du, 2 );        
+    int lim;
+    if (n == -1) {
+        lim = fmin(ts1.length(), ts2.length());
     }
-
-    dist = sqrt( dist );
-    return dist;
+    else {
+        lim = fmin(n, fmin(ts1.length(), ts2.length()));
+    }
+    return this->c_distance(ts1, ts2, lim);
 }
 
 
@@ -333,7 +171,7 @@ DUST::readLookUpTables(const char *lookUpTablesPath)
     }
 
     std::string line;
-    
+
     for (int i = 0; i < 3; i++) {
         for (int j0 = 0; j0 < STDDEV_STEPS; j0++) {
             for (int j1 = 0; j1 < STDDEV_STEPS; j1++) {
@@ -482,7 +320,7 @@ void
 DUST::calcGamma(double *table_d, double *table_g, int len1, int len2)
 {
     table_g[0] = table_d[0];
-    
+
     for (int i = 1; i < len1; i++) {
         table_g[ i*len2 ] = table_d[ i*len2 ] + table_g[ (i-1) * len2 ];
     }
@@ -490,7 +328,7 @@ DUST::calcGamma(double *table_d, double *table_g, int len1, int len2)
     for (int i = 1; i < len2; i++) {
         table_g[i] = table_d[i] + table_g[i-1];
     }
-    
+
     for (int i = 1; i< len1; i++) {
         for (int j = 1; j < len2; j++) {
             table_g[ i*len2 + j ] =
@@ -511,14 +349,14 @@ double
 DUST::calcSum(double *table_d, double *table_g, int len1, int len2)
 {
     double sum = 0.0;
-    
+
     int i = len1 - 1;
     int j = len2 - 1;
-    
+
     while (i > 0 || j > 0) {
-        
+
         sum += table_g[ i*len2 + j ];
-            
+
         if (i == 0) {
             j--;
         }
