@@ -5,9 +5,11 @@
 #include <cmath>
 #include <cstdlib>
 
-//using namespace std;
+#include <omp.h>
+#include <cstdio>
 
-double
+
+inline double
 c_pdf_uniform (double lower, double upper, double x)
 {
     if ((x < lower) || (x > upper)) {
@@ -19,7 +21,7 @@ c_pdf_uniform (double lower, double upper, double x)
     return 1.0 / (upper - lower);
 }
 
-double
+inline double
 c_pdf_normal (double mean, double sd, double x)
 {
     if (isinf(x) || sd <= 0 || isinf(sd) || isinf(mean)) {
@@ -39,7 +41,7 @@ c_pdf_normal (double mean, double sd, double x)
 }
 
 
-double
+inline double
 c_myPDF (int distribution, double mean, double stddev, double v)
 {
     double ret = -1.0f;
@@ -58,7 +60,7 @@ c_myPDF (int distribution, double mean, double stddev, double v)
 
 
 // calculate p(y|r(y)=v)p(r(y)=v)
-double
+inline double
 c_f1 (double v, double *params)
 {
     double p1 = c_myPDF( params[ PARAM_X_DISTRIBUTION ],   // distribution
@@ -73,7 +75,7 @@ c_f1 (double v, double *params)
 
 
 // calculate p(y|r(y)=v)p(r(y)=v)
-double
+inline double
 c_f2 (double v, double *params)
 {
     double p1 = c_myPDF( params[ PARAM_Y_DISTRIBUTION ],   // distribution
@@ -88,7 +90,7 @@ c_f2 (double v, double *params)
 
 
 // p(r(x)=z|x) * p(r(y)=z|y)
-double
+inline double
 c_f3 (double z, double *params)
 {
     int    x_dist   = (int)params[ PARAM_X_DISTRIBUTION ];
@@ -139,7 +141,7 @@ c_f4 (double k, double *params)
     return 1.0;
 }
 
-double myrand(){
+inline double myrand(){
     return ((double) rand() / (RAND_MAX));
 }
 
@@ -147,21 +149,34 @@ double myrand(){
 double
 c_dust_kernel (double *params, int time)
 {
-    double in1, in2, in3;
     double o1 = 0.0;
     double o2 = 0.0;
     double o3 = 0.0;
 
-    // put (f1, f2, f3) into (o1, o2, o3) for all samples
-    // Get sum of (o1, o2, o3) for all threads
-    for (int i = 0; i < INTEGRATION_SAMPLES; i++) {
-        in1 = myrand() * RANGE_WIDTH + RANGE_MIN;
-        in2 = myrand() * RANGE_WIDTH + RANGE_MIN;
-        in3 = myrand() * RANGE_WIDTH + RANGE_MIN;
+    omp_set_dynamic(0);
+    omp_set_num_threads(4);
+
+// #ifdef _OPENMP
+//     printf("aaaaaaa\n");
+// #endif
+
+// #pragma omp parallel num_threads(4)
+//     {
+//         printf("threads: %d\n", omp_get_num_threads());
+//     }
+
+#pragma omp parallel for num_threads(4) reduction(+: o1, o2, o3)
+    for (int i=0; i < INTEGRATION_SAMPLES; i++) {
+        double in1 = myrand() * RANGE_WIDTH + RANGE_MIN;
+        double in2 = myrand() * RANGE_WIDTH + RANGE_MIN;
+        double in3 = myrand() * RANGE_WIDTH + RANGE_MIN;
         o1 += c_f1( in1, params );
         o2 += c_f2( in2, params );
         o3 += c_f3( in3, params );
     }
+
+    // printf("max: %d\n", omp_get_max_threads());
+    // printf("max: %d\n", omp_get_num_threads());
 
     double r = (double)RANGE_WIDTH / INTEGRATION_SAMPLES;
     double int1 = o1 * r;
@@ -177,6 +192,3 @@ c_dust_kernel (double *params, int time)
 
     return d;
 }
-
-
-

@@ -4,8 +4,10 @@
 
 CXX      = nvcc
 CPX      = g++
-CFLAGS   = -Iinclude -use_fast_math
-CPPFLAGS = -Iinclude -use_fast_math -O3 -msse2 -msse3
+CFLAGS   = -Iinclude -use_fast_math -Xcompiler -fopenmp
+CPPFLAGS = -Iinclude -use_fast_math -O3 -msse2 -msse3 -fopenmp
+# CPPFLAGS = -Iinclude -fopenmp
+# CPPFLAGS = -Iinclude
 # -L../opt/boost/lib -I../opt/boost/include
 
 LIBS     = -lcutil -lcurand -lgsl -lgslcblas
@@ -24,17 +26,17 @@ OBJ	= $(addsuffix .o, $(basename $(CUDASRC))) $(addsuffix .o, $(basename $(CPPSR
 all:  header $(APPNAME) trailer
 
 
-%.o: %.cu
+src/%.o: src/%.cu
 	@echo Compiling: "$@ ( $< )"
-	@$(CXX) $(CFLAGS) -c -o $@ $<
+	@$(CXX) $(CFLAGS) -c -o $@ $< -Xcompiler -fopenmp 
 
-%.o: %.cpp
+src/%.o: src/%.cpp
 	@echo Compiling: "$@ ( $< )"
-	@$(CPX) $(CPPFLAGS) -c -o $@ $<
+	@$(CPX) $(CPPFLAGS) -c -o $@ $< -fopenmp
 
 $(APPNAME): $(OBJ) 
 	@echo Compiling: "$@ ( $^ )"
-	@$(CXX) $(CFLAGS) $(OBJ) -o $(APPNAME) $(LIBS)
+	@$(CXX) $(CFLAGS) $(OBJ) -o $(APPNAME) $(LIBS)  -Xcompiler -fopenmp 
 
 
 header:
