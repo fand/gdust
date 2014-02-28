@@ -148,12 +148,9 @@ exp1 (int argc, char **argv)
 void
 exp2 (int argc, char **argv)
 {
-
-
-//    for (int t = 50; t <= 100; t += 50) {
     for (int t = 50; t <= 500; t += 50) {
         char filename[50];
-        snprintf(filename, 50, "%s_%d", argv[1], t);
+        snprintf(filename, 50, "%s/exp2/Gun_Point_error_3_trunk_%d", argv[1], t);
         std::cout << filename << std::endl;
         
         TimeSeriesCollection db( filename, 2, -1 ); // distribution is normal
@@ -168,11 +165,9 @@ exp2 (int argc, char **argv)
             
         double res_gpu = 0;
         double res_cpu = 0;
-            
+
        for (int i = 0; i < 9; i++) {
            for (int j = i; j < 10; j++) {
-        // for (int i = 0; i < 1; i++) {
-        //     for (int j = i; j < 2; j++) {
                 // TimeSeries &ts1 = db.sequences[rand() % (int)(100)];
                 // TimeSeries &ts2 = db.sequences[rand() % (int)(100)];
                 TimeSeries &ts1 = db.sequences[i];
