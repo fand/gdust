@@ -17,6 +17,4 @@ double c_f1 (double v, double *params);
 double c_f2 (double v, double *params);
 double c_f3 (double z, double *params);
 double c_f4 (double k, double *params);
-double c_dust_kernel (double *params, int time);
-
-double myrand();
+double c_dust_kernel (double *params, double *rands, int time);

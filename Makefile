@@ -6,8 +6,6 @@ CXX      = nvcc
 CPX      = g++
 CFLAGS   = -Iinclude -use_fast_math -Xcompiler -fopenmp
 CPPFLAGS = -Iinclude -use_fast_math -O3 -msse2 -msse3 -fopenmp
-# CPPFLAGS = -Iinclude -fopenmp
-# CPPFLAGS = -Iinclude
 # -L../opt/boost/lib -I../opt/boost/include
 
 LIBS     = -lcutil -lcurand -lgsl -lgslcblas
@@ -28,15 +26,15 @@ all:  header $(APPNAME) trailer
 
 src/%.o: src/%.cu
 	@echo Compiling: "$@ ( $< )"
-	@$(CXX) $(CFLAGS) -c -o $@ $< -Xcompiler -fopenmp 
+	@$(CXX) $(CFLAGS) -c -o $@ $<
 
 src/%.o: src/%.cpp
 	@echo Compiling: "$@ ( $< )"
-	@$(CPX) $(CPPFLAGS) -c -o $@ $< -fopenmp
+	@$(CPX) $(CPPFLAGS) -c -o $@ $<
 
 $(APPNAME): $(OBJ) 
 	@echo Compiling: "$@ ( $^ )"
-	@$(CXX) $(CFLAGS) $(OBJ) -o $(APPNAME) $(LIBS)  -Xcompiler -fopenmp 
+	@$(CXX) $(CFLAGS) $(OBJ) -o $(APPNAME) $(LIBS)
 
 
 header:

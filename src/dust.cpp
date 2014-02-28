@@ -17,11 +17,23 @@ clean_probability (double p)
     return (p < 0.0) ? 0.0 : p;
 }
 
+inline double myrand(){
+    return ((double) rand() / (RAND_MAX));
+}
+
 
 double
 DUST::c_distance (TimeSeries &ts1, TimeSeries &ts2, int n)
 {
     double dist = 0;
+
+    double *rands = new double[n * 3 * INTEGRATION_SAMPLES];
+
+    int lim = INTEGRATION_SAMPLES * n * 3;
+    for (int i=0; i<lim; i++) {
+        rands[i] = myrand();
+    }
+
 
     for (int i=0; i < n; i++) {
         RandomVariable x = ts1.at(i);
@@ -36,8 +48,10 @@ DUST::c_distance (TimeSeries &ts1, TimeSeries &ts2, int n)
             y.stddev
         };
 
-        dist += c_dust_kernel(params, i);
+        dist += c_dust_kernel(params, rands, i);
     }
+
+    delete[] rands;
 
     return sqrt(dist);
 }
