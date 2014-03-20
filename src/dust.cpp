@@ -9,6 +9,7 @@
 
 #include <cassert>
 
+#include <omp.h>
 #include "ckernel.hpp"
 
 inline double
@@ -17,38 +18,44 @@ clean_probability (double p)
     return (p < 0.0) ? 0.0 : p;
 }
 
-inline double myrand(){
-    return ((double) rand() / (RAND_MAX));
-}
-
 
 double
 DUST::c_distance (TimeSeries &ts1, TimeSeries &ts2, int n)
 {
-    double dist = 0;
+    double dist = 0.0;
 
-    double *rands = new double[n * 3 * INTEGRATION_SAMPLES];
+    const long seeds[12] = {
+        3467, 10267, 16651, 19441, 23497, 27361,
+        35317, 76801, 199933, 919393, 939193, 999331,
+    };
 
-    int lim = INTEGRATION_SAMPLES * n * 3;
-    for (int i=0; i<lim; i++) {
-        rands[i] = myrand();
+    const int num_rands = n * 3 * INTEGRATION_SAMPLES;
+    __attribute__((aligned(64))) double *rands = new double[num_rands];
+
+    #pragma omp parallel
+    {
+        int tid = omp_get_thread_num();
+        struct drand48_data buffer;
+        srand48_r(seeds[tid], &buffer);
+#pragma omp for schedule(static)
+        for (int i = 0; i < num_rands; ++i) {
+            drand48_r(&buffer, &rands[i]);
+            rands[i] = rands[i] * RANGE_WIDTH + RANGE_MIN;
+        }
     }
 
-
-    for (int i=0; i < n; i++) {
+#pragma omp parallel for reduction(+: dist)
+    for (int i = 0; i < n; ++i) {
         RandomVariable x = ts1.at(i);
         RandomVariable y = ts2.at(i);
 
         double params[] = {
-            x.distribution,
-            x.observation,
-            x.stddev,
-            y.distribution,
-            y.observation,
-            y.stddev
+            x.distribution, x.observation, x.stddev,
+            y.distribution, y.observation, y.stddev
         };
 
-        dist += c_dust_kernel(params, rands, i);
+        double d = c_dust_kernel(params, rands, i);
+        dist += d;
     }
 
     delete[] rands;
@@ -227,7 +234,7 @@ DUST::readLookUpTables(const char *lookUpTablesPath)
             for (int j1 = 0; j1 < STDDEV_STEPS; j1++) {
                 for (int k = 0; k < DISTANCE_STEPS; k++) {
                     assert(
-                        lookuptables[ i ][ j0 ][ j1 ][ k ] >= 0
+                                                lookuptables[ i ][ j0 ][ j1 ][ k ] >= 0
                     ); // this ensures that all needed values are present.
                 }
             }
@@ -244,34 +251,34 @@ DUST::dust( RandomVariable &x, RandomVariable &y )
     if (lookupTablesAvailable) {
         assert( x.distribution == y.distribution );
 
-        double distance =
-            ceil( ABS(x.observation - y.observation) * (1 / DISTANCE_STEP) ) /
-            (1 / DISTANCE_STEP );
+                double distance =
+                    ceil( ABS(x.observation - y.observation) * (1 / DISTANCE_STEP) ) /
+                    (1 / DISTANCE_STEP );
 
-        if (distance > DISTANCE_END) {
-            distance = DISTANCE_END;
-        }
+                if (distance > DISTANCE_END) {
+                    distance = DISTANCE_END;
+                }
 
-        assert( x.distribution >= 1 && x.distribution <= 3 );
-        assert( x.stddev >= STDDEV_BEGIN && x.stddev <= STDDEV_END );
-        assert( distance >= DISTANCE_BEGIN && distance <= DISTANCE_END );
+                assert( x.distribution >= 1 && x.distribution <= 3 );
+                assert( x.stddev >= STDDEV_BEGIN && x.stddev <= STDDEV_END );
+                assert( distance >= DISTANCE_BEGIN && distance <= DISTANCE_END );
 
-        int stddev0_offset = (int)round( x.stddev / STDDEV_STEP );
-        int stddev1_offset = (int)round( y.stddev / STDDEV_STEP );
-        int distance_offset = (int)( distance / DISTANCE_STEP );
+                int stddev0_offset = (int)round( x.stddev / STDDEV_STEP );
+                int stddev1_offset = (int)round( y.stddev / STDDEV_STEP );
+                int distance_offset = (int)( distance / DISTANCE_STEP );
 
-        assert( stddev0_offset >= 0 && stddev0_offset < STDDEV_STEPS );
-        assert( stddev1_offset >= 0 && stddev1_offset < STDDEV_STEPS );
-        assert( distance_offset >= 0 && distance_offset < DISTANCE_STEPS );
+                assert( stddev0_offset >= 0 && stddev0_offset < STDDEV_STEPS );
+                assert( stddev1_offset >= 0 && stddev1_offset < STDDEV_STEPS );
+                assert( distance_offset >= 0 && distance_offset < DISTANCE_STEPS );
 
-        double dustdist = lookuptables[ x.distribution - 1 ][ stddev0_offset ][ stddev1_offset ][ distance_offset ];
+                double dustdist = lookuptables[ x.distribution - 1 ][ stddev0_offset ][ stddev1_offset ][ distance_offset ];
 
-        if (dustdist < 0) {
-            std::cerr << "dustdist negative: " << dustdist << " " << x.distribution << std::endl;
-        }
+                if (dustdist < 0) {
+                    std::cerr << "dustdist negative: " << dustdist << " " << x.distribution << std::endl;
+                }
 
-        assert( dustdist >= 0 );
-        return dustdist;
+                assert( dustdist >= 0 );
+                return dustdist;
     }
 
     double K = 0; // K disabled. we do not need normalization. MAX(-log10(phi(x,x)), -log10(phi(y,y)));
@@ -302,7 +309,7 @@ DUST::dtw(TimeSeries &ts1, TimeSeries &ts2)
     calcGamma( table_d, table_g, len1, len2 );
     double dist = calcSum(table_d, table_g, len1, len2 );
 
-//    dist = sqrt( dist );
+    //    dist = sqrt( dist );
 
     free( table_d );
     free( table_g );
@@ -318,7 +325,7 @@ DUST::calcCost(TimeSeries &ts1, TimeSeries &ts2, double *table_d, double *table_
 
         for (int j = 0; j < len2; j++) {
             RandomVariable r2 = ts2.at(j);
-//            table_d[ i*len2 + j ] = pow( dust( r1, r2 ), 2 );
+            //            table_d[ i*len2 + j ] = pow( dust( r1, r2 ), 2 );
             table_d[ i*len2 + j ] = dust( r1, r2 );
         }
     }
@@ -340,15 +347,15 @@ DUST::calcGamma(double *table_d, double *table_g, int len1, int len2)
 
     for (int i = 1; i< len1; i++) {
         for (int j = 1; j < len2; j++) {
-            table_g[ i*len2 + j ] =
-                table_d[ i*len2 + j ] +
-                std::min(
-                    std::min(
-                        table_g[ (i-1) * len2 + j ],
-                        table_g[ i*len2 + j-1 ]
-                    ),
-                    table_g[ (i-1)*len2 + j-1 ]
-                );
+                        table_g[ i*len2 + j ] =
+                                            table_d[ i*len2 + j ] +
+                            std::min(
+                                std::min(
+                                    table_g[ (i-1) * len2 + j ],
+                                                            table_g[ i*len2 + j-1 ]
+                                ),
+                                table_g[ (i-1)*len2 + j-1 ]
+                            );
         }
     }
 }
@@ -426,4 +433,3 @@ DUST::buildFDustTables( const char *path )
         }
     }
 }
-

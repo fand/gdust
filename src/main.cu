@@ -191,8 +191,6 @@ exp2 (int argc, char **argv)
         std::cout << "time_gpu: " << time_gpu / 45 << std::endl;
         std::cout << "time_cpu: " << time_cpu / 45 << std::endl;
         std::cout << std::endl;
-
-        sleep(180);
     }
 }
 
