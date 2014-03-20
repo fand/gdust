@@ -152,7 +152,8 @@ c_dust_kernel (double *params, double *rands, int time)
 
     // omp_set_dynamic(0);
 
-#pragma omp parallel for num_threads(4) reduction(+: o1, o2, o3)
+// #pragma omp parallel for num_threads(4) reduction(+: o1, o2, o3)
+#pragma omp parallel for reduction(+: o1, o2, o3)    
     for (int i=0; i < INTEGRATION_SAMPLES; i++) {
         double in1 = rands[offset + i * 3 + 0] * RANGE_WIDTH + RANGE_MIN;
         double in2 = rands[offset + i * 3 + 1] * RANGE_WIDTH + RANGE_MIN;
