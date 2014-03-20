@@ -8,7 +8,7 @@ CFLAGS   = -Iinclude -use_fast_math -Xcompiler -fopenmp
 CPPFLAGS = -Iinclude -use_fast_math -O3 -msse2 -msse3 -fopenmp
 # -L../opt/boost/lib -I../opt/boost/include
 
-LIBS     = -lcutil -lcurand -lgsl -lgslcblas
+LIBS     = -lcurand -lgsl -lgslcblas
 
 APPNAME  = bin/gdustdtw
 

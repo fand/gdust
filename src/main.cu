@@ -10,7 +10,6 @@
 #include "watch.hpp"
 #include "config.hpp"
 
-#include <cutil.h>
 #include <limits>
 #include <iostream>
 #include <stdio.h>
@@ -48,8 +47,8 @@ main (int argc, char **argv)
     // checkDistance( argc, argv );
 
     // exp1( argc, argv );
-    exp2( argc, argv );
-    // exp3( argc, argv );    
+    // exp2( argc, argv );
+    exp3( argc, argv );    
     
     cleanUp();
 }
