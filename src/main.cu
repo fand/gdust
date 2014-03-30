@@ -21,7 +21,6 @@ extern int optind, optopt, opterr;
 #include "dust.hpp"
 #include "gdust.hpp"
 
-#include <cutil.h>
 
 OPT o;
 

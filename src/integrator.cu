@@ -4,7 +4,6 @@
 #include <math.h>
 #include <fstream>
 
-#include <cutil.h>
 #include <curand.h>
 
 #include <iostream>
@@ -27,19 +26,19 @@
 
 Integrator::~Integrator()
 {
-    CUDA_SAFE_CALL( cudaFree( this->in_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->out_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->param_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->sum_GPU ) );
+    cudaFree( this->in_GPU );
+    cudaFree( this->out_GPU );
+    cudaFree( this->param_GPU );
+    cudaFree( this->sum_GPU );
     
 
-    CUDA_SAFE_CALL( cudaFree( this->out1_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->out2_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->out3_GPU ) );    
-    CUDA_SAFE_CALL( cudaFree( this->sum1_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->sum2_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->sum3_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->answer_GPU ) );
+    cudaFree( this->out1_GPU );
+    cudaFree( this->out2_GPU );
+    cudaFree( this->out3_GPU );  
+    cudaFree( this->sum1_GPU );
+    cudaFree( this->sum2_GPU );
+    cudaFree( this->sum3_GPU );
+    cudaFree( this->answer_GPU );
 
     
     free(this->in);
@@ -64,18 +63,18 @@ Integrator::Integrator()
     this->sum2 = (float *)malloc(sizeof(float));
     this->sum3 = (float *)malloc(sizeof(float));    
 
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->in_GPU), size ) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->out_GPU), size ) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->param_GPU), sizeof(float) * PARAM_SIZE ) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->sum_GPU), sizeof(float) * BPG ) );
+    cudaMalloc( (void**)&(this->in_GPU), size );
+    cudaMalloc( (void**)&(this->out_GPU), size );
+    cudaMalloc( (void**)&(this->param_GPU), sizeof(float) * PARAM_SIZE );
+    cudaMalloc( (void**)&(this->sum_GPU), sizeof(float) * BPG );
     
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->out1_GPU), size) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->out2_GPU), size) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->out3_GPU), size) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->sum1_GPU), sizeof(float) ) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->sum2_GPU), sizeof(float) ) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->sum3_GPU), sizeof(float) ) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->answer_GPU), sizeof(float) ) );
+    cudaMalloc( (void**)&(this->out1_GPU), size);
+    cudaMalloc( (void**)&(this->out2_GPU), size);
+    cudaMalloc( (void**)&(this->out3_GPU), size);
+    cudaMalloc( (void**)&(this->sum1_GPU), sizeof(float) );
+    cudaMalloc( (void**)&(this->sum2_GPU), sizeof(float) );
+    cudaMalloc( (void**)&(this->sum3_GPU), sizeof(float) );
+    cudaMalloc( (void**)&(this->answer_GPU), sizeof(float) );
     
     this->gen = new curandGenerator_t();
     curandCreateGenerator( this->gen, CURAND_RNG_PSEUDO_MTGP32 );
@@ -96,11 +95,10 @@ float Integrator::integrate( int fnum, float *param )
     int calls = INTEGRATION_SAMPLES;    // 49152
 
 
-    CUDA_SAFE_CALL(
-        cudaMemcpy( this->param_GPU,
-                    param,
-                    sizeof(float) * PARAM_SIZE,    // param size
-                    cudaMemcpyHostToDevice ) );
+    cudaMemcpy( this->param_GPU,
+                param,
+                sizeof(float) * PARAM_SIZE,    // param size
+                cudaMemcpyHostToDevice );
     
     // exec!
     dim3 blocks( BPG, 1, 1 );
@@ -115,10 +113,10 @@ float Integrator::integrate( int fnum, float *param )
 
     reduce<float>(calls, TPB, BPG, this->out_GPU, this->sum_GPU);
 
-    CUDA_SAFE_CALL( cudaMemcpy( this->sum,
-                                this->sum_GPU,
-                                sizeof(float) * BPG,
-                                cudaMemcpyDeviceToHost ) );
+    cudaMemcpy( this->sum,
+                this->sum_GPU,
+                sizeof(float) * BPG,
+                cudaMemcpyDeviceToHost );
 
     float tes = 0;
     for (int i=0; i < BPG; i++) {
@@ -132,11 +130,11 @@ float Integrator::integrate( int fnum, float *param )
 
 float Integrator::phi( float *param )
 {
-    CUDA_SAFE_CALL(
-        cudaMemcpy( this->param_GPU,
-                    param,
-                    sizeof(float) * PARAM_SIZE,    // param size
-                    cudaMemcpyHostToDevice ) );
+
+    cudaMemcpy( this->param_GPU,
+                param,
+                sizeof(float) * PARAM_SIZE,    // param size
+                cudaMemcpyHostToDevice );
 
     // exec!
     dim3 blocks( BPG, 1, 1 );
@@ -148,9 +146,9 @@ float Integrator::phi( float *param )
 
 
     float answer = 0;
-    CUDA_SAFE_CALL( cudaMemcpy( &answer,
-                                this->answer_GPU,
-                                sizeof(float),
-                                cudaMemcpyDeviceToHost ) );
+    cudaMemcpy( &answer,
+                this->answer_GPU,
+                sizeof(float),
+                cudaMemcpyDeviceToHost );
     return answer;
 }
