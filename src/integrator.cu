@@ -4,7 +4,6 @@
 #include <math.h>
 #include <fstream>
 
-#include <cutil.h>
 #include <curand.h>
 
 #include <iostream>
@@ -27,10 +26,10 @@
 
 Integrator::~Integrator()
 {
-    CUDA_SAFE_CALL( cudaFree( this->in_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->out_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->param_GPU ) );
-    CUDA_SAFE_CALL( cudaFree( this->sum_GPU ) );
+    cudaFree( this->in_GPU );
+    cudaFree( this->out_GPU );
+    cudaFree( this->param_GPU );
+    cudaFree( this->sum_GPU );
     free(this->in);
     free(this->out);
     free(this->sum);
@@ -47,10 +46,10 @@ Integrator::Integrator()
     this->out = (float *)malloc(size);
     this->sum = (float *)malloc(sizeof(float) * BPG);
 
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->in_GPU), size * 3 ) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->out_GPU), size ) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->param_GPU), sizeof(float) * PARAM_SIZE ) );
-    CUDA_SAFE_CALL( cudaMalloc( (void**)&(this->sum_GPU), sizeof(float) * BPG ) );
+    cudaMalloc( (void**)&(this->in_GPU), size * 3 );
+    cudaMalloc( (void**)&(this->out_GPU), size );
+    cudaMalloc( (void**)&(this->param_GPU), sizeof(float) * PARAM_SIZE );
+    cudaMalloc( (void**)&(this->sum_GPU), sizeof(float) * BPG );
     
     this->gen = new curandGenerator_t();
     curandCreateGenerator( this->gen, CURAND_RNG_PSEUDO_MTGP32 );
@@ -69,11 +68,11 @@ float Integrator::integrate( int fnum, float *param )
     int calls = INTEGRATION_SAMPLES;    // 49152
 
 
-    CUDA_SAFE_CALL(
-        cudaMemcpy( this->param_GPU,
-                    param,
-                    sizeof(float) * PARAM_SIZE,    // param size
-                    cudaMemcpyHostToDevice ) );
+    
+    cudaMemcpy( this->param_GPU,
+                param,
+                sizeof(float) * PARAM_SIZE,    // param size
+                cudaMemcpyHostToDevice );
 
     
     // generate uniform random number on in_GPU
@@ -107,10 +106,10 @@ float Integrator::integrate( int fnum, float *param )
 
     reduce<float>(calls, TPB, BPG, this->out_GPU, this->sum_GPU);
 
-    CUDA_SAFE_CALL( cudaMemcpy( this->sum,
-                                this->sum_GPU,
-                                sizeof(float) * BPG,
-                                cudaMemcpyDeviceToHost ) );
+    cudaMemcpy( this->sum,
+                this->sum_GPU,
+                sizeof(float) * BPG,
+                cudaMemcpyDeviceToHost );
 
     float tes = 0;
     for (int i=0; i < BPG; i++) {
