@@ -29,6 +29,8 @@ void TimeSeriesCollection::readFile( const char *path, int distribution, int lim
         FATAL( "unable to read timeseriescollection from file" );
     }
 
+    std::cout << "input file:::::::::: " << path << std::endl;
+    
     std::string line;
     while( getline( fin, line ) )
     {
