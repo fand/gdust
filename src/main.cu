@@ -55,42 +55,39 @@ int main( int argc, char **argv )
     cleanUp();
 }
 
+
 void
 exp3 (int argc, char **argv)
 {
-    char filename[50];
-//    snprintf(filename, 50, "%s/exp2/Gun_Point_error_3_trunk_%d", argv[1], t);
-    snprintf(filename, 50, "%s/exp2/Gun_Point_error_3_trunk_150", argv[1]);    
-    std::cout << filename << std::endl;    
-         
-    TimeSeriesCollection db( filename, 2, -1 ); // distribution is normal
+    std::cout << "argv: " << argv[1] << std::endl;
+    
+    TimeSeriesCollection db( argv[1], 2, -1 ); // distribution is normal
     db.normalize();
     
     DUST dust( db );
     GDUST gdust( db );
     Watch watch;
-        
+    
     double time_gpu = 0;
     double time_cpu = 0;
-
-//    std::cout << "ts size: " << db.sequences.size() << std::endl;
     
     for (int i = 0; i < 9; i++) {
         for (int j = i+1; j < 10; j++) {
             TimeSeries &ts1 = db.sequences[i];
             TimeSeries &ts2 = db.sequences[j];
-                                                            
+            
             watch.start();
             double gdustdist = gdust.distance( ts1, ts2, -1 );
             watch.stop();
             time_gpu += watch.getInterval();
+            
             watch.start();
             double dustdist = dust.distance( ts1, ts2, -1 );
             watch.stop();
             time_cpu += watch.getInterval();
         }
     }
-                    
+    
     std::cout << "gpu: " << time_gpu / 45.0 << std::endl;
     std::cout << "cpu: " << time_cpu / 45.0 << std::endl;
 }
