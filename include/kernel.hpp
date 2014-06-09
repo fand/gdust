@@ -26,3 +26,4 @@ __device__ void g_dust_kernel (float *params, float *in, float *answer_GPU);
 template<unsigned int blockSize> __device__ void g_reduceBlock (float *sdata1,
                                                                 float *sdata2,
                                                                 float *sdata3);
+

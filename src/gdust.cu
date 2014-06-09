@@ -30,7 +30,7 @@ GDUST::~GDUST(){}
 
 GDUST::GDUST (TimeSeriesCollection &collection, const char *lookUpTablesPath)
 {
-    this->collection = collection;    
+    this->collection = collection;
     this->init();
 
     this->integ = new Integrator();
@@ -50,3 +50,16 @@ GDUST::distance (TimeSeries &ts1, TimeSeries &ts2, int n)
     return (this->integ)->distance(ts1, ts2, lim);
 }
 
+
+void
+GDUST::match_naive (TimeSeries &ts)
+{
+    this->integ->match_naive(ts, this->collection);
+}
+
+
+void
+GDUST::match (TimeSeries &ts)
+{
+    this->integ->match(ts, this->collection);
+}

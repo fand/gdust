@@ -21,6 +21,9 @@ public:
     
     float  distance (TimeSeries &ts1, TimeSeries &ts2, int n = -1);
     double dtw (TimeSeries &ts1, TimeSeries &ts2);
+
+    void match_naive (TimeSeries &ts);
+    void match (TimeSeries &ts);
     
     TimeSeriesCollection collection;
 

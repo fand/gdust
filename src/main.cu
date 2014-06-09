@@ -245,7 +245,7 @@ exp4 (int argc, char **argv)
     TimeSeries &ts = db.sequences[0];
     
     watch.start();    
-    gdust.match(ts);
+    gdust.match_naive(ts);
     watch.stop();
     time_gpu = watch.getInterval();
                         
