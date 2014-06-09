@@ -34,6 +34,7 @@ void cleanUp();
 void exp1 (int argc, char **argv);
 void exp2 (int argc, char **argv);
 void exp3 (int argc, char **argv);
+void exp4 (int argc, char **argv);
 
 
 
@@ -47,8 +48,9 @@ main (int argc, char **argv)
     // checkDistance( argc, argv );
 
     // exp1( argc, argv );
-    exp2( argc, argv );
-    // exp3( argc, argv );    
+    // exp2( argc, argv );
+    // exp3( argc, argv );
+    exp4( argc, argv );
     
     cleanUp();
 }
@@ -226,6 +228,28 @@ exp3 (int argc, char **argv)
         
     std::cout << "gpu: " << time_gpu / 45.0 << std::endl;
     std::cout << "cpu: " << time_cpu / 45.0 << std::endl;
+}
+
+
+void
+exp4 (int argc, char **argv)
+{
+    TimeSeriesCollection db( argv[1], 2, -1 ); // distribution is normal
+    db.normalize();
+    
+    GDUST gdust( db );
+    Watch watch;
+    
+    double time_gpu = 0;
+
+    TimeSeries &ts = db.sequences[0];
+    
+    watch.start();    
+    gdust.match(ts);
+    watch.stop();
+    time_gpu = watch.getInterval();
+                        
+    std::cout << "gpu: " << time_gpu << std::endl;
 }
 
 
