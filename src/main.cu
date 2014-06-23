@@ -231,19 +231,24 @@ exp3 (int argc, char **argv)
 }
 
 
+// $ bin/gdustdtw exp/Gun_Point_error_3 exp/Gun_Point_error_7
 void
 exp4 (int argc, char **argv)
 {
     TimeSeriesCollection db( argv[1], 2, -1 ); // distribution is normal
     db.normalize();
+    TimeSeriesCollection db2( argv[2], 2, -1 ); // distribution is normal
+    db2.normalize();
 
     GDUST gdust( db );
+    DUST  dust( db );
     Watch watch;
 
     double time_naive = 0;
     double time_multi = 0;
+    double time_cpu = 0;
 
-    TimeSeries &ts = db.sequences[0];
+    TimeSeries &ts = db2.sequences[0];
 
     watch.start();
     gdust.match_naive(ts);
@@ -255,8 +260,14 @@ exp4 (int argc, char **argv)
     watch.stop();
     time_multi = watch.getInterval();
 
+    watch.start();
+    dust.match(ts);
+    watch.stop();
+    time_cpu = watch.getInterval();
+
     std::cout << "naive: " << time_naive << std::endl;
     std::cout << "multi: " << time_multi << std::endl;
+    std::cout << "cpu  : " << time_cpu   << std::endl;
 }
 
 
