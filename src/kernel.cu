@@ -61,7 +61,7 @@ g_f1 (float v, float *params)
                         0.0f,                                // mean
                         params[ PARAM_X_STDDEV ],         // stddev
                         params[ PARAM_X_OBSERVATION ]-v ); // target
-     
+
     float p2 = g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
 
     return p1 * p2;
@@ -76,9 +76,9 @@ g_f2 (float v, float *params)
                         0.0f,                                // mean
                         params[ PARAM_Y_STDDEV ],         // stddev
                         params[ PARAM_Y_OBSERVATION ] - v );  // target
-    
+
     float p2 = g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
-    
+
     return p1 * p2;
 }
 
@@ -93,7 +93,7 @@ g_f3 (float z, float *params)
     int   y_dist   = (int)params[ PARAM_Y_DISTRIBUTION ];
     float y        =      params[ PARAM_Y_OBSERVATION ] + 0.1f;
     float y_stddev =      params[ PARAM_Y_STDDEV ];
-    
+
     float p1, p2;
 
     if (x_dist == RANDVAR_UNIFORM) {
@@ -104,7 +104,7 @@ g_f3 (float z, float *params)
             x_adjust = g_myPDF( x_dist, 0, x_stddev, 0 ) *
                 ( 1 + erf( -( abs(x-z) - x_stddev * SQRT3 ) ) );
         }
-        
+
         if (abs(y-z) > y_stddev * SQRT3) {
             y_adjust = g_myPDF( y_dist, 0, y_stddev, 0 ) *
                 ( 1 + erf( -( abs(y-z) - y_stddev * SQRT3 ) ) );
@@ -141,7 +141,7 @@ g_distance_kernel (float *seq_GPU,
                    float *samples_GPU,
                    float *dust_GPU)
 {
-    float *p_param = seq_GPU  + blockIdx.x * PARAM_SIZE;    
+    float *p_param = seq_GPU  + blockIdx.x * PARAM_SIZE;
     float *p_dust  = dust_GPU + blockIdx.x;
 
     g_dust_kernel(p_param, samples_GPU, p_dust);
@@ -157,7 +157,7 @@ g_dust_kernel (float *params,
     int offset1 = blockIdx.x * INTEGRATION_SAMPLES;
     int offset2 = offset1 + INTEGRATION_SAMPLES * gridDim.x;
     int offset3 = offset2 + INTEGRATION_SAMPLES * gridDim.x;
-    
+
     float o1 = 0.0f;
     float o2 = 0.0f;
     float o3 = 0.0f;
@@ -171,12 +171,12 @@ g_dust_kernel (float *params,
     for (int i = threadIdx.x; i < INTEGRATION_SAMPLES; i += blockDim.x) {
         in1 = in[i + offset1] * RANGE_WIDTH + RANGE_MIN;
         in2 = in[i + offset2] * RANGE_WIDTH + RANGE_MIN;
-        in3 = in[i + offset3] * RANGE_WIDTH + RANGE_MIN;        
+        in3 = in[i + offset3] * RANGE_WIDTH + RANGE_MIN;
         o1 += g_f1( in1, params );
         o2 += g_f2( in2, params );
         o3 += g_f3( in3, params );
     }
-    
+
     // REDUCE PHASE
     // Get sum of (o1, o2, o3) for all threads
     sdata1[threadIdx.x] = o1;
@@ -193,9 +193,9 @@ g_dust_kernel (float *params,
         if (int2 < VERYSMALL) int2 = VERYSMALL;
         float int3 = sdata3[0] * r;
         if (int3 < 0.0f) int3 = 0.0f;
-        
+
         float d = -log10(int3 / (int1 * int2));
-        
+
 //        float d = -log10(sdata3[0] / (sdata1[0] * sdata2[0] * r));
         if (d < 0.0) { d = 0.0f; }
         *answer_GPU = d;
@@ -210,18 +210,18 @@ g_reduceBlock (float *sdata1, float *sdata2, float *sdata3)
 {
     // make sure all threads are ready
     __syncthreads();
-    
+
     unsigned int tid = threadIdx.x;
     float mySum1 = sdata1[tid];
     float mySum2 = sdata2[tid];
-    float mySum3 = sdata3[tid];    
-    
+    float mySum3 = sdata3[tid];
+
     // do reduction in shared mem
     if (blockSize >= 512) {
         if (tid < 256) {
             sdata1[tid] = mySum1 = mySum1 + sdata1[tid + 256];
             sdata2[tid] = mySum2 = mySum2 + sdata2[tid + 256];
-            sdata3[tid] = mySum3 = mySum3 + sdata3[tid + 256];            
+            sdata3[tid] = mySum3 = mySum3 + sdata3[tid + 256];
         }
         __syncthreads();
     }
@@ -230,7 +230,7 @@ g_reduceBlock (float *sdata1, float *sdata2, float *sdata3)
         if (tid < 128) {
             sdata1[tid] = mySum1 = mySum1 + sdata1[tid + 128];
             sdata2[tid] = mySum2 = mySum2 + sdata2[tid + 128];
-            sdata3[tid] = mySum3 = mySum3 + sdata3[tid + 128];            
+            sdata3[tid] = mySum3 = mySum3 + sdata3[tid + 128];
         }
         __syncthreads();
     }
@@ -239,7 +239,7 @@ g_reduceBlock (float *sdata1, float *sdata2, float *sdata3)
         if (tid <  64) {
             sdata1[tid] = mySum1 = mySum1 + sdata1[tid + 64];
             sdata2[tid] = mySum2 = mySum2 + sdata2[tid + 64];
-            sdata3[tid] = mySum3 = mySum3 + sdata3[tid + 64];            
+            sdata3[tid] = mySum3 = mySum3 + sdata3[tid + 64];
         }
         __syncthreads();
     }
@@ -290,3 +290,168 @@ g_reduceBlock (float *sdata1, float *sdata2, float *sdata3)
     }
 }
 
+
+// With seq on global memory
+__global__ void
+g_match (float *ts_GPU,
+         float *db_GPU,
+         float *DUST_GPU,
+         size_t ts_length,
+         size_t db_num,
+         float *o1,
+         float *o2,
+         float *o3,
+         float *in)
+{
+    int time = blockIdx.x * blockDim.x + threadIdx.x;
+
+    float in1, in2, in3;
+    int offset1 = blockIdx.x * INTEGRATION_SAMPLES;
+    int offset2 = offset1 + INTEGRATION_SAMPLES * gridDim.x;
+    int offset3 = offset2 + INTEGRATION_SAMPLES * gridDim.x;
+
+    // float o1 = 0.0f;
+    // float o2 = 0.0f;
+    // float o3 = 0.0f;
+
+    __shared__ float sdata1[TPB];
+    __shared__ float sdata2[TPB];
+    __shared__ float sdata3[TPB];
+
+    // j * lim * 3 + time * 3
+    // 3 * (j * lim + time)
+    int dj = ts_length * 3;
+
+
+    // MAP PHASE
+    // put (f1, f2, f3) into (o1, o2, o3) for all samples
+    for (int i = threadIdx.x; i < INTEGRATION_SAMPLES; i += blockDim.x) {
+        in1 = in[i + offset1] * RANGE_WIDTH + RANGE_MIN;
+        in2 = in[i + offset2] * RANGE_WIDTH + RANGE_MIN;
+        in3 = in[i + offset3] * RANGE_WIDTH + RANGE_MIN;
+
+        // idx < lim
+        int yidx = time * 3;
+        float *x = ts_GPU + yidx;
+
+        for (int j = 0; j < db_num; j++) {
+            float *y = db_GPU + yidx;
+            yidx += dj;
+
+            o1[j] += g_f1_multi( in1, x );
+            o2[j] += g_f2_multi( in2, y );
+            o3[j] += g_f3_multi( in3, x, y );
+        }
+    }
+
+    for (int i = 0; i < db_num; i++) {
+        // REDUCE PHASE
+        // Get sum of (o1, o2, o3) for all threads
+        sdata1[threadIdx.x] = o1[i];
+        sdata2[threadIdx.x] = o2[i];
+        sdata3[threadIdx.x] = o3[i];
+        g_reduceBlock<TPB>(sdata1, sdata2, sdata3);
+
+        float r = (float)RANGE_WIDTH / INTEGRATION_SAMPLES;
+
+        if (threadIdx.x == 0) {
+            float int1 = sdata1[0] * r;
+            if (int1 < VERYSMALL) int1 = VERYSMALL;
+            float int2 = sdata2[0] * r;
+            if (int2 < VERYSMALL) int2 = VERYSMALL;
+            float int3 = sdata3[0] * r;
+            if (int3 < 0.0f) int3 = 0.0f;
+
+            float d = -log10(int3 / (int1 * int2));
+            if (d < 0.0) { d = 0.0f; }
+            DUST_GPU[i] = d;
+        }
+    }
+    return;
+}
+
+
+// calculate p(y|r(y)=v)p(r(y)=v)
+__device__ float
+g_f1_multi (float v, float *x)
+{
+    float p1 = g_myPDF_multi( 0.0f, x, v );
+    float p2 = g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
+    return p1 * p2;
+}
+
+
+// calculate p(y|r(y)=v)p(r(y)=v)
+__device__ float
+g_f2_multi (float v, float *y)
+{
+    float p1 = g_myPDF_multi( 0.0f, y, v );
+    float p2 = g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
+    return p1 * p2;
+}
+
+
+// p(r(x)=z|x) * p(r(y)=z|y)
+__device__ float
+g_f3_multi (float z, float *x_, float *y_)
+{
+    int   x_dist   = (int)x_[0];
+    float x        =      x_[1] + 0.1f;
+    float x_stddev =      x_[2];
+    int   y_dist   = (int)y_[0];
+    float y        =      y_[1] + 0.1f;
+    float y_stddev =      y_[2];
+
+    float p1, p2;
+
+    if (x_dist == RANDVAR_UNIFORM) {
+        float x_adjust = 0;
+        float y_adjust = 0;
+
+        if (abs(x-z) > x_stddev * SQRT3) {
+            x_adjust = g_myPDF( x_dist, 0, x_stddev, 0 ) *
+                ( 1 + erf( -( abs(x-z) - x_stddev * SQRT3 ) ) );
+        }
+
+        if (abs(y-z) > y_stddev * SQRT3) {
+            y_adjust = g_myPDF( y_dist, 0, y_stddev, 0 ) *
+                ( 1 + erf( -( abs(y-z) - y_stddev * SQRT3 ) ) );
+        }
+
+        float pdf_x = g_myPDF( x_dist, 0.0f, x_stddev, x-z ) + x_adjust;
+        float pdf_y = g_myPDF( y_dist, 0.0f, y_stddev, y-z ) + y_adjust;
+
+        p1 = pdf_x * g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
+        p2 = pdf_y * g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
+    }
+    else {
+        // p(r(x)=z|x) and p(r(y)=z|y)
+        p1 = ( g_myPDF( x_dist, 0, x_stddev, x-z ) *
+               g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
+        p2 = ( g_myPDF( y_dist, 0, y_stddev, y-z ) *
+               g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
+    }
+
+    return p1 * p2;
+}
+
+__device__ float
+g_myPDF_multi (float mean, float *x, float target)
+{
+    int distribution = (int)x[0];
+    float v = x[1] - target;
+    float stddev = x[2];
+
+    float ret = -1.0f;
+    if (stddev == 0.0f) stddev = 0.2f;
+
+    if (distribution == RANDVAR_UNIFORM) {
+        float b = SQRT3 * stddev;
+        ret = g_pdf_uniform( -b, b, v );
+    }
+    else if (distribution == RANDVAR_NORMAL) {
+        ret = g_pdf_normal( 0, 1, v / stddev );
+    }
+
+    return ret;
+}
