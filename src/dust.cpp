@@ -178,6 +178,33 @@ DUST::distance(TimeSeries &ts1, TimeSeries &ts2, int n)
 
 
 void
+DUST::match(TimeSeries &ts, int n)
+{
+    TimeSeriesCollection &db = this->collection;
+
+    int lim;
+    if (n == -1) { lim = ts.length(); }
+    for (int i=0; i < db.sequences.size(); i++) {
+        lim = fmin(lim, db.sequences[i].length());
+    }
+
+
+    float distance_min = this->c_distance(ts, db.sequences[0], lim);
+    float i_min = 0;
+    for (int i=1; i < db.sequences.size(); i++) {
+        float d = this->c_distance(ts, db.sequences[i], lim);
+        if (d < distance_min) {
+            distance_min = d;
+            i_min = i;
+        }
+    }
+
+    std::cout << "matched : " << lim << std::endl;
+    std::cout << "\t index: " << i_min << ", distance : " << distance_min << std::endl;
+}
+
+
+void
 DUST::readLookUpTables(const char *lookUpTablesPath)
 {
     std::ifstream fin( lookUpTablesPath );

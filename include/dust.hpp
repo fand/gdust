@@ -33,7 +33,7 @@ public:
     void init();
 
     TimeSeriesCollection collection;
-    
+
     double integrate (double (*f)(double * x_array, size_t dim, void * params), void *params);
 
     double dust (RandomVariable &x, RandomVariable &y);
@@ -43,17 +43,19 @@ public:
     double c_distance (TimeSeries &ts1, TimeSeries &ts2, int n);
     double dtw      (TimeSeries &ts1, TimeSeries &ts2);
 
-    std::vector<int> rangeQuery (TimeSeries ts, double threshold);    
+    void match (TimeSeries &ts, int n = -1);
+
+    std::vector<int> rangeQuery (TimeSeries ts, double threshold);
 
     void   buildFDustTables (const char *path);
-    void   readLookUpTables (const char *lookUpTablesPath);    
+    void   readLookUpTables (const char *lookUpTablesPath);
 
     gsl_rng *r_rng;
     const gsl_rng_type *T;
     bool   lookupTablesAvailable;
     double lookuptables[ 3 ][ STDDEV_STEPS + 1 ][ STDDEV_STEPS + 1 ][ DISTANCE_STEPS + 1 ];
 
-    
+
 private:
     void calcCost  (TimeSeries &ts1, TimeSeries &ts2, double *table_d, double *table_g, int len1, int len2);
     void calcGamma (double *table_d, double *table_g, int len1, int len2);
