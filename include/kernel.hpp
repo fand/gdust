@@ -30,8 +30,7 @@ template<unsigned int blockSize> __device__ void g_reduceBlock (float *sdata1,
 __global__ void g_match (float *ts_GPU, float *db_GPU, float *DUST_GPU, size_t ts_length, size_t db_num,
                          float *o1, float *o2, float *o3, float *samples_GPU);
 
-__device__ float g_f1_multi (float mean, float *x);
-__device__ float g_f2_multi (float mean, float *y);
+__device__ float g_f12_multi (float v, float *x);
 __device__ float g_f3_multi (float z, float *x, float *y);
 
-__device__ float g_myPDF_multi (float mean, float *x, float target);
+__global__ void g_f123_test(float *results);

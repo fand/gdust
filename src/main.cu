@@ -9,6 +9,7 @@
 #include "gdust.hpp"
 #include "watch.hpp"
 #include "config.hpp"
+#include "kernel.hpp"
 
 #include <limits>
 #include <iostream>
@@ -35,7 +36,7 @@ void exp1 (int argc, char **argv);
 void exp2 (int argc, char **argv);
 void exp3 (int argc, char **argv);
 void exp4 (int argc, char **argv);
-
+void ftest ();
 
 
 int
@@ -51,6 +52,8 @@ main (int argc, char **argv)
     // exp2( argc, argv );
     // exp3( argc, argv );
     exp4( argc, argv );
+
+    // ftest();
 
     cleanUp();
 }
@@ -240,6 +243,12 @@ exp4 (int argc, char **argv)
     TimeSeriesCollection db2( argv[2], 2, -1 ); // distribution is normal
     db2.normalize();
 
+    // TimeSeries t = db.sequences.at(10);
+    // TimeSeries tt = db.sequences.at(1);
+    // db.sequences.clear();
+    // db.sequences.push_back(t);
+    // db.sequences.push_back(tt);
+
     GDUST gdust( db );
     DUST  dust( db );
     Watch watch;
@@ -260,10 +269,10 @@ exp4 (int argc, char **argv)
     watch.stop();
     time_multi = watch.getInterval();
 
-    watch.start();
-    dust.match(ts);
-    watch.stop();
-    time_cpu = watch.getInterval();
+    // watch.start();
+    // dust.match(ts);
+    // watch.stop();
+    // time_cpu = watch.getInterval();
 
     std::cout << "naive: " << time_naive << std::endl;
     std::cout << "multi: " << time_multi << std::endl;
@@ -322,4 +331,23 @@ initOpt (int argc, char **argv)
             FATAL( "option '" + TO_STR( optopt ) + "' invalid" );
         }
     }
+}
+
+
+void ftest ()
+{
+    float *results, *results_GPU;
+    results = (float*)malloc(sizeof(float) * 6);
+    cudaMalloc((void**)&results_GPU, sizeof(float) * 6);
+
+    g_f123_test<<< 10, 100 >>>(results_GPU);
+
+    cudaMemcpy( results, results_GPU, sizeof(float) * 6, cudaMemcpyDeviceToHost );
+
+    std::cout << "f1: " << results[0] << ", " << results[1] << std::endl;
+    std::cout << "f2: " << results[2] << ", " << results[3] << std::endl;
+    std::cout << "f3: " << results[4] << ", " << results[5] << std::endl;
+
+    free(results);
+    cudaFree(results_GPU);
 }

@@ -295,7 +295,7 @@ g_reduceBlock (float *sdata1, float *sdata2, float *sdata3)
 __global__ void
 g_match (float *ts_GPU,
          float *db_GPU,
-         float *DUST_GPU,
+         float *dust_GPU,
          size_t ts_length,
          size_t db_num,
          float *o1,
@@ -303,24 +303,17 @@ g_match (float *ts_GPU,
          float *o3,
          float *in)
 {
-    int time = blockIdx.x * blockDim.x + threadIdx.x;
+    int time = blockIdx.x;
+    int o_offset = db_num * time * threadIdx.x;  // the offset of tmp area for this thread.
 
     float in1, in2, in3;
-    int offset1 = blockIdx.x * INTEGRATION_SAMPLES;
-    int offset2 = offset1 + INTEGRATION_SAMPLES * gridDim.x;
-    int offset3 = offset2 + INTEGRATION_SAMPLES * gridDim.x;
-
-    // float o1 = 0.0f;
-    // float o2 = 0.0f;
-    // float o3 = 0.0f;
+    int offset1 = blockIdx.x * INTEGRATION_SAMPLES;           // 50000 * lim * 0 + offset1
+    int offset2 = offset1 + INTEGRATION_SAMPLES * gridDim.x;  // 50000 * lim * 1 + offset1
+    int offset3 = offset2 + INTEGRATION_SAMPLES * gridDim.x;  // 50000 * lim * 2 + offset1
 
     __shared__ float sdata1[TPB];
     __shared__ float sdata2[TPB];
     __shared__ float sdata3[TPB];
-
-    // j * lim * 3 + time * 3
-    // 3 * (j * lim + time)
-    int dj = ts_length * 3;
 
 
     // MAP PHASE
@@ -330,62 +323,69 @@ g_match (float *ts_GPU,
         in2 = in[i + offset2] * RANGE_WIDTH + RANGE_MIN;
         in3 = in[i + offset3] * RANGE_WIDTH + RANGE_MIN;
 
-        // idx < lim
-        int yidx = time * 3;
-        float *x = ts_GPU + yidx;
+        // time < lim  => db_idx < db_size
+        int db_idx = db_num * time * 3;
+        float *x = &ts_GPU[time * 3];  // TODO: compute f1(x) only once.
 
         for (int j = 0; j < db_num; j++) {
-            float *y = db_GPU + yidx;
-            yidx += dj;
+            float *y = &db_GPU[db_idx + 3 * j];
+//            float *y = &db_GPU[db_idx];
+//            db_idx += 3;
 
-            o1[j] += g_f1_multi( in1, x );
-            o2[j] += g_f2_multi( in2, y );
-            o3[j] += g_f3_multi( in3, x, y );
+            o1[o_offset + j] += g_f12_multi( in1, x );
+            o2[o_offset + j] += g_f12_multi( in2, y );
+            o3[o_offset + j] += g_f3_multi( in3, x, y );
         }
     }
 
+    __syncthreads();
+
+
+    int dust_offset = db_num * time;
+    // DB上のseq毎にDUSTを求める
     for (int i = 0; i < db_num; i++) {
+
         // REDUCE PHASE
         // Get sum of (o1, o2, o3) for all threads
-        sdata1[threadIdx.x] = o1[i];
-        sdata2[threadIdx.x] = o2[i];
-        sdata3[threadIdx.x] = o3[i];
+        sdata1[threadIdx.x] = o1[o_offset + i];  // o1 for this thread
+        sdata2[threadIdx.x] = o2[o_offset + i];  // o2 for this thread
+        sdata3[threadIdx.x] = o3[o_offset + i];  // o3 for this thread
+
         g_reduceBlock<TPB>(sdata1, sdata2, sdata3);
 
         float r = (float)RANGE_WIDTH / INTEGRATION_SAMPLES;
 
         if (threadIdx.x == 0) {
-            float int1 = sdata1[0] * r;
-            if (int1 < VERYSMALL) int1 = VERYSMALL;
-            float int2 = sdata2[0] * r;
-            if (int2 < VERYSMALL) int2 = VERYSMALL;
-            float int3 = sdata3[0] * r;
-            if (int3 < 0.0f) int3 = 0.0f;
+            // float int1 = sdata1[0] * r;
+            // if (int1 < VERYSMALL) int1 = VERYSMALL;
+            // float int2 = sdata2[0] * r;
+            // if (int2 < VERYSMALL) int2 = VERYSMALL;
+            // float int3 = sdata3[0] * r;
+            // if (int3 < 0.0f) int3 = 0.0f;
 
-            float d = -log10(int3 / (int1 * int2));
-            if (d < 0.0) { d = 0.0f; }
-            DUST_GPU[i] = d;
+            // float d = -log10(int3 / (int1 * int2));
+            // if (d < 0.0) { d = 0.0f; }
+            // dust_GPU[dust_offset + i] = d;
+            dust_GPU[dust_offset + i] = 1.0f;
         }
     }
-    return;
+
+    for (int i = 0; i < db_num; i++) {
+        if (threadIdx.x == 0) {
+            dust_GPU[time * db_num + i] = db_num;
+        }
+    }
+
+    __syncthreads();
 }
 
 
 // calculate p(y|r(y)=v)p(r(y)=v)
 __device__ float
-g_f1_multi (float v, float *x)
+g_f12_multi (float v, float *x)
 {
-    float p1 = g_myPDF_multi( 0.0f, x, v );
-    float p2 = g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
-    return p1 * p2;
-}
-
-
-// calculate p(y|r(y)=v)p(r(y)=v)
-__device__ float
-g_f2_multi (float v, float *y)
-{
-    float p1 = g_myPDF_multi( 0.0f, y, v );
+//    float p1 = g_myPDF_multi( 0.0f, x, v );
+    float p1 = g_myPDF( x[0], 0.0f, x[2], x[1] - v );
     float p2 = g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
     return p1 * p2;
 }
@@ -435,23 +435,29 @@ g_f3_multi (float z, float *x_, float *y_)
     return p1 * p2;
 }
 
-__device__ float
-g_myPDF_multi (float mean, float *x, float target)
+__global__ void
+g_f123_test(float *results)
 {
-    int distribution = (int)x[0];
-    float v = x[1] - target;
-    float stddev = x[2];
+    float param[] = {
+        0, 0.3, 0.8,
+        0, 0.7, 0.2
+    };
 
-    float ret = -1.0f;
-    if (stddev == 0.0f) stddev = 0.2f;
+    results[5] = 0;
+    __syncthreads();
 
-    if (distribution == RANDVAR_UNIFORM) {
-        float b = SQRT3 * stddev;
-        ret = g_pdf_uniform( -b, b, v );
-    }
-    else if (distribution == RANDVAR_NORMAL) {
-        ret = g_pdf_normal( 0, 1, v / stddev );
-    }
+    float *x = param;
+    float *y = param + 3;
 
-    return ret;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    float v = -10.0 + 0.02 * idx;
+    results[0] += g_f1(v, param);
+    results[1] += g_f12_multi(v, x);
+
+    results[2] += g_f2(v, param);
+    results[3] += g_f12_multi(v, x);
+
+    results[4] += g_f3(v, param);
+    results[5] += g_f3_multi(v, x, y);
 }
