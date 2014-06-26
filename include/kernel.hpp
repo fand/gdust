@@ -33,4 +33,4 @@ __global__ void g_match (float *ts_GPU, float *db_GPU, float *DUST_GPU, size_t t
 __device__ float g_f12_multi (float v, float *x);
 __device__ float g_f3_multi (float z, float *x, float *y);
 
-__global__ void g_f123_test(float *results);
+__global__ void g_f123_test(float *param, float *results);

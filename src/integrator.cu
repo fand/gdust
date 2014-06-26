@@ -75,6 +75,7 @@ Integrator::distance (TimeSeries &ts1, TimeSeries &ts2, int n)
     float dist = 0;
     for (int i=0; i < n; i++) {
         dist += dust[i];
+//        std::cout << dust[i] << std::endl;
     }
 
 
@@ -95,16 +96,17 @@ Integrator::match_naive (TimeSeries &ts, TimeSeriesCollection &db)
     // Determine the length of time series.
     unsigned int lim = ts.length();
 
-    for (int i=0; i < db.sequences.size(); i++) {
+    for (int i = 0; i < db.sequences.size(); i++) {
         lim = min(lim, db.sequences[i].length());
     }
 
     float distance_min = this->distance(ts, db.sequences[0], lim);
     float i_min = 0;
-    for (int i=1; i < db.sequences.size(); i++) {
-        float d = this->distance(ts, db.sequences[i], lim);
-        if (d < distance_min) {
-            distance_min = d;
+    for (int i = 0; i < db.sequences.size(); i++) {
+        float dust = this->distance(ts, db.sequences[i], lim);
+//        std::cout << dust << std::endl;
+        if (dust < distance_min) {
+            distance_min = dust;
             i_min = i;
         }
     }
@@ -143,7 +145,7 @@ Integrator::match (TimeSeries &ts, TimeSeriesCollection &db)
             db_CPU[idx++] = (float)x.distribution;
             db_CPU[idx++] = x.observation;
             db_CPU[idx++] = x.stddev;
-            dust_CPU[i*db_num + j] = 0.0f;
+//            dust_CPU[i*db_num + j] = 0.0f;
         }
     }
 
@@ -168,10 +170,10 @@ Integrator::match (TimeSeries &ts, TimeSeriesCollection &db)
                 ts_size,
                 cudaMemcpyHostToDevice );
 
-    cudaMemcpy( dust_GPU,
-                dust_CPU,
-                dust_size,
-                cudaMemcpyHostToDevice );
+    // cudaMemcpy( dust_GPU,
+    //             dust_CPU,
+    //             dust_size,
+    //             cudaMemcpyHostToDevice );
 
     size_t o_size = sizeof(float) * TPB * db_num * lim;
     float *o1, *o2, *o3;
@@ -183,6 +185,7 @@ Integrator::match (TimeSeries &ts, TimeSeriesCollection &db)
     float *samples_GPU;
     cudaMalloc( (void**)&samples_GPU, sizeof(float) * INTEGRATION_SAMPLES * lim * 3);
     curandGenerateUniform( *(this->gen), samples_GPU, INTEGRATION_SAMPLES * lim * 3 );
+
 
     // DO THE STUFF
     g_match<<< lim, TPB >>>(ts_GPU,
@@ -200,37 +203,29 @@ Integrator::match (TimeSeries &ts, TimeSeriesCollection &db)
                 dust_size,
                 cudaMemcpyDeviceToHost );
 
+    float DUST_min;
+    int i_min;
 
-    // float dust_min;
-    // int i_min;
-    float dust_min =0;
-    int i_min = 0;
+    for (int i = 0; i < db_num; i++) {
+        float dist = 0;
+        for (int j = 0; j < lim; j++) {
+            dist += dust_CPU[db_num * j + i];
+           float d = dust_CPU[db_num * j + i];
+//           std::cout << d << std::endl;
+        }
 
-//    for (int i = 0; i < db_num * lim; i++) {
-    for (int i = 0; i < 10; i++) {
-        std::cout << dust_CPU[i] << std::endl;
+        float DUST = sqrt(dist);
+//        std::cout << DUST << std::endl;
+        if (DUST < DUST_min || i == 0) {
+            DUST_min = DUST;
+            i_min = i;
+        }
     }
-
-//     for (int i = 0; i < db_num; i++) {
-//         float dist = 0;
-//         for (int j = 0; j < lim; j++) {
-//             dist += dust_CPU[db_num * j + i];
-//             float d = dust_CPU[db_num * j + i];
-//             std::cout << d << std::endl;
-//         }
-
-//         float d = sqrt(dist);
-// //        std::cout << d << std::endl;
-//         if (d < dust_min || i == 0) {
-//             dust_min = d;
-//             i_min = i;
-//         }
-//     }
 
     // std::cout << "db_num : " << db_num << std::endl;
     // std::cout << "lim : " << lim << std::endl;
     std::cout << "matched : " << lim << std::endl;
-    std::cout << "\t index: " << i_min << ", distance: " << dust_min << std::endl;
+    std::cout << "\t index: " << i_min << ", distance: " << DUST_min << std::endl;
 
     free(db_CPU);
     cudaFree(db_GPU);

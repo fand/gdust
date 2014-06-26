@@ -36,7 +36,7 @@ void exp1 (int argc, char **argv);
 void exp2 (int argc, char **argv);
 void exp3 (int argc, char **argv);
 void exp4 (int argc, char **argv);
-void ftest ();
+void ftest (int argc, char **argv);
 
 
 int
@@ -53,7 +53,7 @@ main (int argc, char **argv)
     // exp3( argc, argv );
     exp4( argc, argv );
 
-    // ftest();
+    //ftest( argc, argv );
 
     cleanUp();
 }
@@ -243,11 +243,11 @@ exp4 (int argc, char **argv)
     TimeSeriesCollection db2( argv[2], 2, -1 ); // distribution is normal
     db2.normalize();
 
-    // TimeSeries t = db.sequences.at(10);
-    // TimeSeries tt = db.sequences.at(1);
-    // db.sequences.clear();
-    // db.sequences.push_back(t);
-    // db.sequences.push_back(tt);
+    TimeSeries t = db.sequences.at(10);
+    TimeSeries tt = db.sequences.at(1);
+    db.sequences.clear();
+    db.sequences.push_back(t);
+    db.sequences.push_back(tt);
 
     GDUST gdust( db );
     DUST  dust( db );
@@ -334,20 +334,52 @@ initOpt (int argc, char **argv)
 }
 
 
-void ftest ()
+void ftest (int argc, char **argv)
 {
-    float *results, *results_GPU;
-    results = (float*)malloc(sizeof(float) * 6);
-    cudaMalloc((void**)&results_GPU, sizeof(float) * 6);
+    TimeSeriesCollection db( argv[1], 2, -1 ); // distribution is normal
+    db.normalize();
 
-    g_f123_test<<< 10, 100 >>>(results_GPU);
+    TimeSeries ts = db.sequences.at(0);
 
-    cudaMemcpy( results, results_GPU, sizeof(float) * 6, cudaMemcpyDeviceToHost );
+    size_t size = sizeof(float) * 6;
 
-    std::cout << "f1: " << results[0] << ", " << results[1] << std::endl;
-    std::cout << "f2: " << results[2] << ", " << results[3] << std::endl;
-    std::cout << "f3: " << results[4] << ", " << results[5] << std::endl;
+    float *results, *results_GPU, *param, *param_GPU;
+    param   = (float*)malloc(size);
+    results = (float*)malloc(size);
+    cudaMalloc((void**)&param_GPU,   size);
+    cudaMalloc((void**)&results_GPU, size);
+
+    for (int i=0; i < ts.length() - 1; i+=2) {
+        RandomVariable x = ts.at(i);
+        RandomVariable y = ts.at(i+1);
+
+        param[0] = (float)x.distribution;
+        param[1] = x.observation;
+        param[2] = x.stddev;
+        param[3] = (float)y.distribution;
+        param[4] = y.observation;
+        param[5] = y.stddev;
+
+        cudaMemcpy( param_GPU, param, size, cudaMemcpyHostToDevice );
+
+        for (int j=0; j < 6; j++) {
+            results[j] = 0.0f;
+        }
+        cudaMemcpy( results_GPU, results, size, cudaMemcpyHostToDevice );
+
+        g_f123_test<<< 200, 500 >>>(param_GPU, results_GPU);
+
+        cudaMemcpy( results, results_GPU, size, cudaMemcpyDeviceToHost );
+
+        std::cout << "########################################" << std::endl;
+        std::cout << "f1: " << results[0] << ", " << results[1] << std::endl;
+        std::cout << "f2: " << results[2] << ", " << results[3] << std::endl;
+        std::cout << "f3: " << results[4] << ", " << results[5] << std::endl;
+    }
+
 
     free(results);
     cudaFree(results_GPU);
+    free(param);
+    cudaFree(param_GPU);
 }

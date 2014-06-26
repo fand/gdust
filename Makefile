@@ -4,8 +4,8 @@
 
 CXX      = nvcc
 CPX      = g++
-CFLAGS   = -Iinclude -use_fast_math -Xcompiler -fopenmp
-CPPFLAGS = -Iinclude -use_fast_math -O3 -msse2 -msse3 -fopenmp
+CFLAGS   = -Iinclude -use_fast_math -Xcompiler -fopenmp -g -G
+CPPFLAGS = -Iinclude -use_fast_math -O3 -msse2 -msse3 -fopenmp -g -G
 # -L../opt/boost/lib -I../opt/boost/include
 
 LIBS     = -lcurand -lgsl -lgslcblas

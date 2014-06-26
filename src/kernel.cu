@@ -194,11 +194,10 @@ g_dust_kernel (float *params,
         float int3 = sdata3[0] * r;
         if (int3 < 0.0f) int3 = 0.0f;
 
-        float d = -log10(int3 / (int1 * int2));
+        float dust = -log10(int3 / (int1 * int2));
 
-//        float d = -log10(sdata3[0] / (sdata1[0] * sdata2[0] * r));
-        if (d < 0.0) { d = 0.0f; }
-        *answer_GPU = d;
+        if (dust < 0.0) { dust = 0.0f; }
+        *answer_GPU = dust;
     }
 }
 
@@ -298,85 +297,82 @@ g_match (float *ts_GPU,
          float *dust_GPU,
          size_t ts_length,
          size_t db_num,
-         float *o1,
-         float *o2,
-         float *o3,
+         float *_o1,
+         float *_o2,
+         float *_o3,
          float *in)
 {
     int time = blockIdx.x;
-    int o_offset = db_num * time * threadIdx.x;  // the offset of tmp area for this thread.
+
+    int o_offset = db_num * time * threadIdx.x;  // the offset of tmp area for this thread
+    float *o1 = &_o1[o_offset];                  // o1 for this thread
+    float *o2 = &_o2[o_offset];
+    float *o3 = &_o3[o_offset];
 
     float in1, in2, in3;
-    int offset1 = blockIdx.x * INTEGRATION_SAMPLES;           // 50000 * lim * 0 + offset1
+    int offset1 = blockIdx.x * INTEGRATION_SAMPLES;
     int offset2 = offset1 + INTEGRATION_SAMPLES * gridDim.x;  // 50000 * lim * 1 + offset1
     int offset3 = offset2 + INTEGRATION_SAMPLES * gridDim.x;  // 50000 * lim * 2 + offset1
+    float *samples1 = &in[offset1];
+    float *samples2 = &in[offset2];
+    float *samples3 = &in[offset3];
+
+    for (int i = 0; i < db_num; i++) {
+        o1[i] = 0.0f;    // o1 for db[i]
+        o2[i] = 0.0f;
+        o3[i] = 0.0f;
+    }
 
     __shared__ float sdata1[TPB];
     __shared__ float sdata2[TPB];
     __shared__ float sdata3[TPB];
 
+    float *db = &db_GPU[db_num * time * 3];  // db for this block
+    float *x  = &ts_GPU[time * 3];           // TODO: compute f1 only once.
 
     // MAP PHASE
     // put (f1, f2, f3) into (o1, o2, o3) for all samples
     for (int i = threadIdx.x; i < INTEGRATION_SAMPLES; i += blockDim.x) {
-        in1 = in[i + offset1] * RANGE_WIDTH + RANGE_MIN;
-        in2 = in[i + offset2] * RANGE_WIDTH + RANGE_MIN;
-        in3 = in[i + offset3] * RANGE_WIDTH + RANGE_MIN;
-
-        // time < lim  => db_idx < db_size
-        int db_idx = db_num * time * 3;
-        float *x = &ts_GPU[time * 3];  // TODO: compute f1(x) only once.
+        in1 = samples1[i] * RANGE_WIDTH + RANGE_MIN;
+        in2 = samples2[i] * RANGE_WIDTH + RANGE_MIN;
+        in3 = samples3[i] * RANGE_WIDTH + RANGE_MIN;
 
         for (int j = 0; j < db_num; j++) {
-            float *y = &db_GPU[db_idx + 3 * j];
-//            float *y = &db_GPU[db_idx];
-//            db_idx += 3;
-
-            o1[o_offset + j] += g_f12_multi( in1, x );
-            o2[o_offset + j] += g_f12_multi( in2, y );
-            o3[o_offset + j] += g_f3_multi( in3, x, y );
+            float *y = &db[j * 3];
+            o1[j] += g_f12_multi( in1, x );
+            o2[j] += g_f12_multi( in2, y );
+            o3[j] += g_f3_multi( in3, x, y );
         }
     }
 
     __syncthreads();
 
-
-    int dust_offset = db_num * time;
-    // DB上のseq毎にDUSTを求める
+    float *dusts = &db_GPU[db_num * time];
+    float r = (float)RANGE_WIDTH / INTEGRATION_SAMPLES;
     for (int i = 0; i < db_num; i++) {
 
-        // REDUCE PHASE
-        // Get sum of (o1, o2, o3) for all threads
-        sdata1[threadIdx.x] = o1[o_offset + i];  // o1 for this thread
-        sdata2[threadIdx.x] = o2[o_offset + i];  // o2 for this thread
-        sdata3[threadIdx.x] = o3[o_offset + i];  // o3 for this thread
+        sdata1[threadIdx.x] = o1[i];
+        sdata2[threadIdx.x] = o2[i];
+        sdata3[threadIdx.x] = o3[i];
 
         g_reduceBlock<TPB>(sdata1, sdata2, sdata3);
 
-        float r = (float)RANGE_WIDTH / INTEGRATION_SAMPLES;
+        __syncthreads();
 
         if (threadIdx.x == 0) {
-            // float int1 = sdata1[0] * r;
-            // if (int1 < VERYSMALL) int1 = VERYSMALL;
-            // float int2 = sdata2[0] * r;
-            // if (int2 < VERYSMALL) int2 = VERYSMALL;
-            // float int3 = sdata3[0] * r;
-            // if (int3 < 0.0f) int3 = 0.0f;
+            float int1 = sdata1[0] * r;
+            float int2 = sdata2[0] * r;
+            float int3 = sdata3[0] * r;
+            if (int1 < VERYSMALL) int1 = VERYSMALL;
+            if (int2 < VERYSMALL) int2 = VERYSMALL;
+            if (int3 < 0.0f)      int3 = 0.0f;
 
-            // float d = -log10(int3 / (int1 * int2));
-            // if (d < 0.0) { d = 0.0f; }
-            // dust_GPU[dust_offset + i] = d;
-            dust_GPU[dust_offset + i] = 1.0f;
+            float dust = -log10(int3 / (int1 * int2));
+            if (dust < 0.0) { dust = 0.0f; }
+
+            dusts[i] = dust;
         }
     }
-
-    for (int i = 0; i < db_num; i++) {
-        if (threadIdx.x == 0) {
-            dust_GPU[time * db_num + i] = db_num;
-        }
-    }
-
-    __syncthreads();
 }
 
 
@@ -384,7 +380,6 @@ g_match (float *ts_GPU,
 __device__ float
 g_f12_multi (float v, float *x)
 {
-//    float p1 = g_myPDF_multi( 0.0f, x, v );
     float p1 = g_myPDF( x[0], 0.0f, x[2], x[1] - v );
     float p2 = g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
     return p1 * p2;
@@ -396,7 +391,7 @@ __device__ float
 g_f3_multi (float z, float *x_, float *y_)
 {
     int   x_dist   = (int)x_[0];
-    float x        =      x_[1] + 0.1f;
+    float x        =      x_[1] - 0.1f;
     float x_stddev =      x_[2];
     int   y_dist   = (int)y_[0];
     float y        =      y_[1] + 0.1f;
@@ -436,14 +431,8 @@ g_f3_multi (float z, float *x_, float *y_)
 }
 
 __global__ void
-g_f123_test(float *results)
+g_f123_test(float *param, float *results)
 {
-    float param[] = {
-        0, 0.3, 0.8,
-        0, 0.7, 0.2
-    };
-
-    results[5] = 0;
     __syncthreads();
 
     float *x = param;
@@ -451,12 +440,12 @@ g_f123_test(float *results)
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    float v = -10.0 + 0.02 * idx;
+    float v = (x[1] + y[1]) * 0.5;
     results[0] += g_f1(v, param);
     results[1] += g_f12_multi(v, x);
 
     results[2] += g_f2(v, param);
-    results[3] += g_f12_multi(v, x);
+    results[3] += g_f12_multi(v, y);
 
     results[4] += g_f3(v, param);
     results[5] += g_f3_multi(v, x, y);
