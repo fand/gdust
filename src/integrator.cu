@@ -75,7 +75,6 @@ Integrator::distance (TimeSeries &ts1, TimeSeries &ts2, int n)
     float dist = 0;
     for (int i=0; i < n; i++) {
         dist += dust[i];
-//        std::cout << dust[i] << std::endl;
     }
 
 
@@ -100,19 +99,22 @@ Integrator::match_naive (TimeSeries &ts, TimeSeriesCollection &db)
         lim = min(lim, db.sequences[i].length());
     }
 
-    float distance_min = this->distance(ts, db.sequences[0], lim);
-    float i_min = 0;
+    float DUST_min;
+    float i_min;
+
     for (int i = 0; i < db.sequences.size(); i++) {
-        float dust = this->distance(ts, db.sequences[i], lim);
-//        std::cout << dust << std::endl;
-        if (dust < distance_min) {
-            distance_min = dust;
+        float DUST = this->distance(ts, db.sequences[i], lim);
+
+        // std::cout << "CPU " << i << ": " << DUST << std::endl;
+
+        if (DUST < DUST_min || i == 0) {
+            DUST_min = DUST;
             i_min = i;
         }
     }
 
     std::cout << "matched : " << lim << std::endl;
-    std::cout << "\t index: " << i_min << ", distance : " << distance_min << std::endl;
+    std::cout << "\t index: " << i_min << ", distance : " << DUST_min << std::endl;
 }
 
 
@@ -126,7 +128,7 @@ Integrator::match (TimeSeries &ts, TimeSeriesCollection &db)
         lim = min(lim, db.sequences[i].length());
     }
 
-    // db needs (3 * float * lim * db_num) bytes = 3*4*150*200
+    // db needs (3 * float * lim * db_num) bytes =~ 3*4*150*200
     // can settle on global memory.
     size_t db_size = sizeof(float) * 3 * db_num * lim;
     float *db_CPU, *db_GPU;
@@ -177,12 +179,12 @@ Integrator::match (TimeSeries &ts, TimeSeriesCollection &db)
 
 
     // DO THE STUFF
-    g_match<<< lim, TPB >>>(ts_GPU,
-                            db_GPU,
-                            dust_GPU,
-                            lim,
-                            db_num,
-                            samples_GPU);
+    g_match<<< lim, TPB >>>( ts_GPU,
+                             db_GPU,
+                             dust_GPU,
+                             lim,
+                             db_num,
+                             samples_GPU );
 
     cudaMemcpy( dust_CPU,
                 dust_GPU,
@@ -196,13 +198,10 @@ Integrator::match (TimeSeries &ts, TimeSeriesCollection &db)
         float dist = 0;
         for (int j = 0; j < lim; j++) {
             dist += dust_CPU[db_num * j + i];
-
-//            float d = dust_CPU[db_num * j + i];
-//            std::cout << d << std::endl;
         }
 
         float DUST = sqrt(dist);
-//        std::cout << DUST << std::endl;
+        // std::cout << "GPU " << i << ": " << DUST << std::endl;
         if (DUST < DUST_min || i == 0) {
             DUST_min = DUST;
             i_min = i;

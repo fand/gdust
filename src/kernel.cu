@@ -326,7 +326,7 @@ g_match (float *ts_GPU,
 
     for (int i = 0; i < db_num; i++) {
         float *y = &db[i * 3];
-
+        o1 = o2 = o3 = 0.0f;
         for (int j = threadIdx.x; j < INTEGRATION_SAMPLES; j += blockDim.x) {
             in1 = samples1[j] * RANGE_WIDTH + RANGE_MIN;
             in2 = samples2[j] * RANGE_WIDTH + RANGE_MIN;

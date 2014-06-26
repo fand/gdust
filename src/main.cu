@@ -243,11 +243,11 @@ exp4 (int argc, char **argv)
     TimeSeriesCollection db2( argv[2], 2, -1 ); // distribution is normal
     db2.normalize();
 
-    TimeSeries t = db.sequences.at(10);
-    TimeSeries tt = db.sequences.at(1);
-    db.sequences.clear();
-    db.sequences.push_back(t);
-    db.sequences.push_back(tt);
+    // TimeSeries t = db.sequences.at(10);
+    // TimeSeries tt = db.sequences.at(1);
+    // db.sequences.clear();
+    // db.sequences.push_back(t);
+    // db.sequences.push_back(tt);
 
     GDUST gdust( db );
     DUST  dust( db );
