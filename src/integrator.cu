@@ -145,7 +145,6 @@ Integrator::match (TimeSeries &ts, TimeSeriesCollection &db)
             db_CPU[idx++] = (float)x.distribution;
             db_CPU[idx++] = x.observation;
             db_CPU[idx++] = x.stddev;
-//            dust_CPU[i*db_num + j] = 0.0f;
         }
     }
 
@@ -153,11 +152,12 @@ Integrator::match (TimeSeries &ts, TimeSeriesCollection &db)
     float *ts_CPU, *ts_GPU;
     ts_CPU = (float*)malloc(ts_size);
     cudaMalloc((void**)&ts_GPU, ts_size);
+    idx = 0;
     for (int i = 0; i < lim; i++) {
         RandomVariable x = ts.at(i);
-        ts_CPU[i]     = (float)x.distribution;
-        ts_CPU[i + 1] = x.observation;
-        ts_CPU[i + 2] = x.stddev;
+        ts_CPU[idx++] = (float)x.distribution;
+        ts_CPU[idx++] = x.observation;
+        ts_CPU[idx++] = x.stddev;
     }
 
     cudaMemcpy( db_GPU,
@@ -169,17 +169,6 @@ Integrator::match (TimeSeries &ts, TimeSeriesCollection &db)
                 ts_CPU,
                 ts_size,
                 cudaMemcpyHostToDevice );
-
-    // cudaMemcpy( dust_GPU,
-    //             dust_CPU,
-    //             dust_size,
-    //             cudaMemcpyHostToDevice );
-
-    size_t o_size = sizeof(float) * TPB * db_num * lim;
-    float *o1, *o2, *o3;
-    cudaMalloc((void**)&o1, o_size);
-    cudaMalloc((void**)&o2, o_size);
-    cudaMalloc((void**)&o3, o_size);
 
     // generate uniform random number on samples_GPU
     float *samples_GPU;
@@ -193,9 +182,6 @@ Integrator::match (TimeSeries &ts, TimeSeriesCollection &db)
                             dust_GPU,
                             lim,
                             db_num,
-                            o1,
-                            o2,
-                            o3,
                             samples_GPU);
 
     cudaMemcpy( dust_CPU,
@@ -204,14 +190,15 @@ Integrator::match (TimeSeries &ts, TimeSeriesCollection &db)
                 cudaMemcpyDeviceToHost );
 
     float DUST_min;
-    int i_min;
+    int i_min = 0;
 
     for (int i = 0; i < db_num; i++) {
         float dist = 0;
         for (int j = 0; j < lim; j++) {
             dist += dust_CPU[db_num * j + i];
-           float d = dust_CPU[db_num * j + i];
-//           std::cout << d << std::endl;
+
+//            float d = dust_CPU[db_num * j + i];
+//            std::cout << d << std::endl;
         }
 
         float DUST = sqrt(dist);
@@ -233,8 +220,5 @@ Integrator::match (TimeSeries &ts, TimeSeriesCollection &db)
     cudaFree(dust_GPU);
     free(ts_CPU);
     cudaFree(ts_GPU);
-    cudaFree(o1);
-    cudaFree(o2);
-    cudaFree(o3);
     cudaFree(samples_GPU);
 }

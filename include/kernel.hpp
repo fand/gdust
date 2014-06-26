@@ -28,7 +28,7 @@ template<unsigned int blockSize> __device__ void g_reduceBlock (float *sdata1,
                                                                 float *sdata3);
 
 __global__ void g_match (float *ts_GPU, float *db_GPU, float *DUST_GPU, size_t ts_length, size_t db_num,
-                         float *o1, float *o2, float *o3, float *samples_GPU);
+                         float *samples_GPU);
 
 __device__ float g_f12_multi (float v, float *x);
 __device__ float g_f3_multi (float z, float *x, float *y);

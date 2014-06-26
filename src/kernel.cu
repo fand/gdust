@@ -2,6 +2,7 @@
 #include "randomvariable.hpp"
 #include "config.hpp"
 
+#include <stdio.h>
 
 __device__ float
 g_pdf_uniform (float lower, float upper, float x)
@@ -297,17 +298,9 @@ g_match (float *ts_GPU,
          float *dust_GPU,
          size_t ts_length,
          size_t db_num,
-         float *_o1,
-         float *_o2,
-         float *_o3,
          float *in)
 {
     int time = blockIdx.x;
-
-    int o_offset = db_num * time * threadIdx.x;  // the offset of tmp area for this thread
-    float *o1 = &_o1[o_offset];                  // o1 for this thread
-    float *o2 = &_o2[o_offset];
-    float *o3 = &_o3[o_offset];
 
     float in1, in2, in3;
     int offset1 = blockIdx.x * INTEGRATION_SAMPLES;
@@ -317,43 +310,36 @@ g_match (float *ts_GPU,
     float *samples2 = &in[offset2];
     float *samples3 = &in[offset3];
 
-    for (int i = 0; i < db_num; i++) {
-        o1[i] = 0.0f;    // o1 for db[i]
-        o2[i] = 0.0f;
-        o3[i] = 0.0f;
-    }
+    float o1 = 0.0f;
+    float o2 = 0.0f;
+    float o3 = 0.0f;
 
     __shared__ float sdata1[TPB];
     __shared__ float sdata2[TPB];
     __shared__ float sdata3[TPB];
 
+    float *dusts = &dust_GPU[db_num * time];
+    float r = (float)RANGE_WIDTH / INTEGRATION_SAMPLES;
+
     float *db = &db_GPU[db_num * time * 3];  // db for this block
     float *x  = &ts_GPU[time * 3];           // TODO: compute f1 only once.
 
-    // MAP PHASE
-    // put (f1, f2, f3) into (o1, o2, o3) for all samples
-    for (int i = threadIdx.x; i < INTEGRATION_SAMPLES; i += blockDim.x) {
-        in1 = samples1[i] * RANGE_WIDTH + RANGE_MIN;
-        in2 = samples2[i] * RANGE_WIDTH + RANGE_MIN;
-        in3 = samples3[i] * RANGE_WIDTH + RANGE_MIN;
-
-        for (int j = 0; j < db_num; j++) {
-            float *y = &db[j * 3];
-            o1[j] += g_f12_multi( in1, x );
-            o2[j] += g_f12_multi( in2, y );
-            o3[j] += g_f3_multi( in3, x, y );
-        }
-    }
-
-    __syncthreads();
-
-    float *dusts = &db_GPU[db_num * time];
-    float r = (float)RANGE_WIDTH / INTEGRATION_SAMPLES;
     for (int i = 0; i < db_num; i++) {
+        float *y = &db[i * 3];
 
-        sdata1[threadIdx.x] = o1[i];
-        sdata2[threadIdx.x] = o2[i];
-        sdata3[threadIdx.x] = o3[i];
+        for (int j = threadIdx.x; j < INTEGRATION_SAMPLES; j += blockDim.x) {
+            in1 = samples1[j] * RANGE_WIDTH + RANGE_MIN;
+            in2 = samples2[j] * RANGE_WIDTH + RANGE_MIN;
+            in3 = samples3[j] * RANGE_WIDTH + RANGE_MIN;
+
+            o1 += g_f12_multi( in1, x );
+            o2 += g_f12_multi( in2, y );
+            o3 += g_f3_multi( in3, x, y );
+        }
+
+        sdata1[threadIdx.x] = o1;
+        sdata2[threadIdx.x] = o2;
+        sdata3[threadIdx.x] = o3;
 
         g_reduceBlock<TPB>(sdata1, sdata2, sdata3);
 
@@ -369,6 +355,8 @@ g_match (float *ts_GPU,
 
             float dust = -log10(int3 / (int1 * int2));
             if (dust < 0.0) { dust = 0.0f; }
+
+            // printf("%d:%d: \t %f \t %f \t %f\n", i, time, int1, int2, int3);
 
             dusts[i] = dust;
         }

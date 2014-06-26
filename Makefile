@@ -4,7 +4,7 @@
 
 CXX      = nvcc
 CPX      = g++
-CFLAGS   = -Iinclude -use_fast_math -Xcompiler -fopenmp -g -G
+CFLAGS   = -Iinclude -use_fast_math -Xcompiler -fopenmp -g -G -arch sm_35
 CPPFLAGS = -Iinclude -use_fast_math -O3 -msse2 -msse3 -fopenmp -g -G
 # -L../opt/boost/lib -I../opt/boost/include
 
@@ -32,7 +32,7 @@ src/%.o: src/%.cpp
 	@echo Compiling: "$@ ( $< )"
 	@$(CPX) $(CPPFLAGS) -c -o $@ $<
 
-$(APPNAME): $(OBJ) 
+$(APPNAME): $(OBJ)
 	@echo Compiling: "$@ ( $^ )"
 	@$(CXX) $(CFLAGS) $(OBJ) -o $(APPNAME) $(LIBS)
 
@@ -59,7 +59,7 @@ clean:
 
 
 # For TEST
-T_FLAGS	= -Iinclude -Isrc 
+T_FLAGS	= -Iinclude -Isrc
 T_LIBS	= -lcutil -lcurand -lgsl -lgslcblas
 T_APPNAME = bin/test
 
@@ -79,6 +79,6 @@ C_OBJ	= $(filter-out %main.o, $(filter-out %kernel.o, $(OBJ)))
 
 
 test: $(T_OBJ) $(OBJ)
-	@$(CXX) $(T_FLAGS) $(T_OBJ) $(C_OBJ) -o $(T_APPNAME) $(T_LIBS) 
+	@$(CXX) $(T_FLAGS) $(T_OBJ) $(C_OBJ) -o $(T_APPNAME) $(T_LIBS)
 
 # eof
