@@ -50,8 +50,8 @@ main (int argc, char **argv)
 
     // exp1( argc, argv );
     // exp2( argc, argv );
-    // exp3( argc, argv );
-    exp4( argc, argv );
+    exp3( argc, argv );
+    //exp4( argc, argv );
 
     // ftest( argc, argv );
 
@@ -269,10 +269,10 @@ exp4 (int argc, char **argv)
     watch.stop();
     time_multi = watch.getInterval();
 
-    // watch.start();
-    // dust.match(ts);
-    // watch.stop();
-    // time_cpu = watch.getInterval();
+    watch.start();
+    dust.match(ts);
+    watch.stop();
+    time_cpu = watch.getInterval();
 
     std::cout << "naive: " << time_naive << std::endl;
     std::cout << "multi: " << time_multi << std::endl;
