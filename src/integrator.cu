@@ -174,8 +174,8 @@ Integrator::match (TimeSeries &ts, TimeSeriesCollection &db)
 
     // generate uniform random number on samples_GPU
     float *samples_GPU;
-    cudaMalloc( (void**)&samples_GPU, sizeof(float) * INTEGRATION_SAMPLES * lim * 3);
-    curandGenerateUniform( *(this->gen), samples_GPU, INTEGRATION_SAMPLES * lim * 3 );
+    cudaMalloc( (void**)&samples_GPU, sizeof(float) * INTEGRATION_SAMPLES * lim * db_num * 3);
+    curandGenerateUniform( *(this->gen), samples_GPU, INTEGRATION_SAMPLES * lim * db_num * 3);
 
 
     // DO THE STUFF
