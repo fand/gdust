@@ -13,10 +13,14 @@
 
 #include <limits>
 #include <iostream>
+#include <vector>
+#include <string>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <boost/foreach.hpp>
+#include <boost/program_options.hpp>
 #include <unistd.h>
 extern char *optarg;
 extern int optind, optopt, opterr;
@@ -28,34 +32,71 @@ OPT o;
 
 
 int  main (int argc, char **argv);
-void initOpt (int argc, char **argv);
+boost::program_options::variables_map initOpt(int argc, char **argv);
 void checkDistance (int argc, char **argv);
 void cleanUp();
 
-void exp1 (int argc, char **argv);
-void exp2 (int argc, char **argv);
-void exp3 (int argc, char **argv);
-void exp4 (int argc, char **argv);
-void ftest (int argc, char **argv);
+void exp1 (std::vector<std::string>);
+void exp2 (std::vector<std::string>);
+void exp3 (std::vector<std::string>);
+void exp4 (std::vector<std::string>);
+void ftest (std::vector<std::string>);
 
+boost::program_options::variables_map initOpt(int argc, char **argv) {
+    namespace po = boost::program_options;
+    po::options_description generic("Generic options");
+    po::options_description hidden("Hidden options");
+    po::options_description visible("Allowed options");
+    generic.add_options()("exp", po::value< std::vector<int> >(), "exp number to run")("test", "run tests");
+    hidden.add_options()("file", po::value< std::vector<std::string> >(), "input file");
+    visible.add(generic).add(hidden);
+
+    po::positional_options_description p;
+    p.add("file", -1);
+
+    po::variables_map vm;
+    po::store(po::command_line_parser(argc, argv).
+              options(visible).positional(p).run(), vm);
+    po::notify(vm);
+
+    return vm;
+}
 
 int
 main (int argc, char **argv)
 {
-    initOpt( argc, argv );
+    // init
     std::cout.precision( 4 );
     std::cerr.precision( 4 );
 
-    // checkDistance( argc, argv );
+    // Parse options
+    boost::program_options::variables_map vm = initOpt(argc, argv);
+    if (! vm.count("file")) {
+        std::cerr << "Please specify input files!" << std::endl;
+        return -1;
+    }
 
-    // exp1( argc, argv );
-    // exp2( argc, argv );
-    exp3( argc, argv );
-    //exp4( argc, argv );
+    std::vector<std::string>  files = vm["file"].as< std::vector<std::string> >();
 
-    // ftest( argc, argv );
+    if (vm.count("exp")) {
+        std::vector<int> exps = vm["exp"].as< std::vector<int> >();
+        BOOST_FOREACH(int i,  exps)
+        {
+            switch (i)
+            {
+            case 1: exp1(files); break;
+            case 2: exp2(files); break;
+            case 3: exp3(files); break;
+            case 4: exp4(files); break;
+            }
+        }
+    }
+    else if (vm.count("test")) {
+        ftest( files );
+    }
 
     cleanUp();
+    return 0;
 }
 
 
@@ -115,9 +156,9 @@ checkDistance (int argc, char **argv)
 
 
 void
-exp1 (int argc, char **argv)
+exp1 (std::vector<std::string> argv)
 {
-    TimeSeriesCollection db( argv[1], 2, -1 ); // distribution is normal
+    TimeSeriesCollection db( argv[1].c_str() , 2, -1 ); // distribution is normal
     db.normalize();
 
     DUST dust( db );
@@ -150,11 +191,11 @@ exp1 (int argc, char **argv)
 
 
 void
-exp2 (int argc, char **argv)
+exp2 (std::vector<std::string> argv)
 {
     for (int t = 50; t <= 500; t += 50) {
         char filename[50];
-        snprintf(filename, 50, "%s/exp2/Gun_Point_error_3_trunk_%d", argv[1], t);
+        snprintf(filename, 50, "%s/exp2/Gun_Point_error_3_trunk_%d", argv[1].c_str(), t);
         std::cout << filename << std::endl;
 
         TimeSeriesCollection db( filename, 2, -1 ); // distribution is normal
@@ -200,9 +241,9 @@ exp2 (int argc, char **argv)
 }
 
 void
-exp3 (int argc, char **argv)
+exp3 (std::vector<std::string> argv)
 {
-    TimeSeriesCollection db( argv[1], 2, -1 ); // distribution is normal
+    TimeSeriesCollection db( argv[1].c_str(), 2, -1 ); // distribution is normal
     db.normalize();
 
     DUST dust( db );
@@ -236,11 +277,11 @@ exp3 (int argc, char **argv)
 
 // $ bin/gdustdtw exp/Gun_Point_error_3 exp/Gun_Point_error_7
 void
-exp4 (int argc, char **argv)
+exp4 (std::vector<std::string> argv)
 {
-    TimeSeriesCollection db( argv[1], 2, -1 ); // distribution is normal
+    TimeSeriesCollection db( argv[0].c_str(), 2, -1 ); // distribution is normal
     db.normalize();
-    TimeSeriesCollection db2( argv[2], 2, -1 ); // distribution is normal
+    TimeSeriesCollection db2( argv[1].c_str(), 2, -1 ); // distribution is normal
     db2.normalize();
 
     // TimeSeries t = db.sequences.at(10);
@@ -290,53 +331,9 @@ cleanUp()
 }
 
 
-void
-initOpt (int argc, char **argv)
+void ftest (std::vector<std::string> argv)
 {
-    int c;
-
-    o.synthetic = false;
-    o.syntheticLength = -1;
-    o.rfileCollection = NULL;
-    o.rfileQuery = NULL;
-    o.rfileQuery2 = NULL;
-    o.wfile = NULL;
-
-    opterr = 0;
-
-    while ((c = getopt( argc, argv, "C:Q:q:w:" )) != EOF) {
-        switch (c)
-        {
-        case 'C':
-            SAFE_FREE( o.rfileCollection );
-            o.rfileCollection = strdup( optarg );
-            break;
-
-        case 'q':
-            SAFE_FREE( o.rfileQuery );
-            o.rfileQuery = strdup( optarg );
-            break;
-
-        case 'Q':
-            SAFE_FREE( o.rfileQuery2 );
-            o.rfileQuery2 = strdup( optarg );
-            break;
-
-        case 'w':
-            SAFE_FREE( o.wfile );
-            o.wfile = strdup( optarg );
-            break;
-
-        default:
-            FATAL( "option '" + TO_STR( optopt ) + "' invalid" );
-        }
-    }
-}
-
-
-void ftest (int argc, char **argv)
-{
-    TimeSeriesCollection db( argv[1], 2, -1 ); // distribution is normal
+    TimeSeriesCollection db( argv[1].c_str(), 2, -1 ); // distribution is normal
     db.normalize();
 
     TimeSeries ts = db.sequences.at(0);
