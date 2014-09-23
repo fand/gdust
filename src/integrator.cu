@@ -2,8 +2,8 @@
 #include "randomvariable.hpp"
 #include "kernel.hpp"
 #include "config.hpp"
+#include "cutil.hpp"
 
-#include <helper_cuda.h>
 #include <curand.h>
 
 #include <iostream>

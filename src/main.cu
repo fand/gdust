@@ -10,6 +10,7 @@
 #include "watch.hpp"
 #include "config.hpp"
 #include "kernel.hpp"
+#include "cutil.hpp"
 
 #include <limits>
 #include <iostream>
