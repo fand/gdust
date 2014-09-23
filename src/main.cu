@@ -343,8 +343,8 @@ void ftest (std::vector<std::string> argv)
     float *results, *results_GPU, *param, *param_GPU;
     param   = (float*)malloc(size);
     results = (float*)malloc(size);
-    cudaMalloc((void**)&param_GPU,   size);
-    cudaMalloc((void**)&results_GPU, size);
+    checkCudaErrors(cudaMalloc((void**)&param_GPU,   size));
+    checkCudaErrors(cudaMalloc((void**)&results_GPU, size));
 
     for (int i=0; i < ts.length() - 1; i+=2) {
         RandomVariable x = ts.at(i);
@@ -357,16 +357,16 @@ void ftest (std::vector<std::string> argv)
         param[4] = y.observation;
         param[5] = y.stddev;
 
-        cudaMemcpy( param_GPU, param, size, cudaMemcpyHostToDevice );
+        checkCudaErrors(cudaMemcpy( param_GPU, param, size, cudaMemcpyHostToDevice ));
 
         for (int j=0; j < 6; j++) {
             results[j] = 0.0f;
         }
-        cudaMemcpy( results_GPU, results, size, cudaMemcpyHostToDevice );
+        checkCudaErrors(cudaMemcpy( results_GPU, results, size, cudaMemcpyHostToDevice ));
 
         g_f123_test<<< 200, 500 >>>(param_GPU, results_GPU);
 
-        cudaMemcpy( results, results_GPU, size, cudaMemcpyDeviceToHost );
+        checkCudaErrors(cudaMemcpy( results, results_GPU, size, cudaMemcpyDeviceToHost ));
 
         std::cout << "########################################" << std::endl;
         std::cout << "f1: " << results[0] << ", " << results[1] << std::endl;
@@ -376,7 +376,7 @@ void ftest (std::vector<std::string> argv)
 
 
     free(results);
-    cudaFree(results_GPU);
     free(param);
-    cudaFree(param_GPU);
+    checkCudaErrors(cudaFree(results_GPU));
+    checkCudaErrors(cudaFree(param_GPU));
 }
