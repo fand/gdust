@@ -304,8 +304,8 @@ g_match (float *ts_GPU,
 
     float in1, in2, in3;
     int offset1 = blockIdx.x * INTEGRATION_SAMPLES;
-    int offset2 = offset1 + INTEGRATION_SAMPLES * gridDim.x;  // 50000 * lim * 1 + offset1
-    int offset3 = offset2 + INTEGRATION_SAMPLES * gridDim.x;  // 50000 * lim * 2 + offset1
+    int offset2 = offset1 + INTEGRATION_SAMPLES * gridDim.x * db_num;  // 50000 * lim * 1 + offset1
+    int offset3 = offset2 + INTEGRATION_SAMPLES * gridDim.x * db_num;  // 50000 * lim * 2 + offset1
     float *samples1 = &in[offset1];
     float *samples2 = &in[offset2];
     float *samples3 = &in[offset3];
@@ -328,9 +328,9 @@ g_match (float *ts_GPU,
         float *y = &db[i * 3];
         o1 = o2 = o3 = 0.0f;
         for (int j = threadIdx.x; j < INTEGRATION_SAMPLES; j += blockDim.x) {
-            in1 = samples1[j] * RANGE_WIDTH + RANGE_MIN;
-            in2 = samples2[j] * RANGE_WIDTH + RANGE_MIN;
-            in3 = samples3[j] * RANGE_WIDTH + RANGE_MIN;
+            in1 = samples1[i * db_num + j] * RANGE_WIDTH + RANGE_MIN;
+            in2 = samples2[i * db_num + j] * RANGE_WIDTH + RANGE_MIN;
+            in3 = samples3[i * db_num + j] * RANGE_WIDTH + RANGE_MIN;
 
             o1 += g_f12_multi( in1, x );
             o2 += g_f12_multi( in2, y );

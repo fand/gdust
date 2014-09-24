@@ -4,25 +4,22 @@
 
 CXX      = nvcc
 CPX      = g++
-CFLAGS   = -Iinclude -use_fast_math -Xcompiler -fopenmp -g -G -arch sm_35
-CPPFLAGS = -Iinclude -use_fast_math -O3 -msse2 -msse3 -fopenmp -g -G
-# -L../opt/boost/lib -I../opt/boost/include
-
-LIBS     = -lcurand -lgsl -lgslcblas
-
+CFLAGS   = -Iinclude -use_fast_math -Xcompiler -fopenmp -arch sm_35
+CPPFLAGS = -Iinclude -use_fast_math -O3 -msse2 -msse3 -fopenmp
+LIBS     = -lcurand -lgsl -lgslcblas -lboost_program_options
 APPNAME  = bin/gdustdtw
 
 #####################################################################
 
-
 CUDASRC	= $(wildcard src/*.cu)
 CPPSRC	= $(wildcard src/*.cpp)
-#HDR	= $(wildcard include/*.hpp)
 OBJ	= $(addsuffix .o, $(basename $(CUDASRC))) $(addsuffix .o, $(basename $(CPPSRC)))
 
-
-all:  header $(APPNAME) trailer
-
+all: executable
+debug: CFLAGS += -DDEBUG -g
+debug: CPPFLAGS += -DDEBUG -g
+debug: executable
+executable:  header $(APPNAME) trailer
 
 src/%.o: src/%.cu
 	@echo Compiling: "$@ ( $< )"
@@ -35,7 +32,6 @@ src/%.o: src/%.cpp
 $(APPNAME): $(OBJ)
 	@echo Compiling: "$@ ( $^ )"
 	@$(CXX) $(CFLAGS) $(OBJ) -o $(APPNAME) $(LIBS)
-
 
 header:
 	@echo "%"
@@ -57,7 +53,6 @@ clean:
 	@rm -rf src/*.o *.dSYM $(APPNAME)
 
 
-
 # For TEST
 T_FLAGS	= -Iinclude -Isrc
 T_LIBS	= -lcutil -lcurand -lgsl -lgslcblas
@@ -68,7 +63,6 @@ T_CPP	= $(wildcard t/*.cpp)
 T_OBJ	= $(addsuffix .o, $(basename $(T_CU))) $(addsuffix .o, $(basename $(T_CPP)))
 C_OBJ	= $(filter-out %main.o, $(filter-out %kernel.o, $(OBJ)))
 
-
 %.o: %.cu
 	@echo Compiling: "$@ ( $< )"
 	@$(CXX) $(T_FLAGS) -c -o $@ $<
@@ -76,7 +70,6 @@ C_OBJ	= $(filter-out %main.o, $(filter-out %kernel.o, $(OBJ)))
 %.o: %.cpp
 	@echo Compiling: "$@ ( $< )"
 	@$(CXX) $(T_FLAGS) -c -o $@ $<
-
 
 test: $(T_OBJ) $(OBJ)
 	@$(CXX) $(T_FLAGS) $(T_OBJ) $(C_OBJ) -o $(T_APPNAME) $(T_LIBS)
