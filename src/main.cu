@@ -1,3 +1,8 @@
+// main.cu
+//
+// You can run experiments with following command.
+// $ bin/gdustdtw --exp [num] [files...]
+
 #include "main.hpp"
 #include "dataset.hpp"
 #include "common.hpp"
