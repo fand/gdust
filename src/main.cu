@@ -33,10 +33,6 @@ extern int optind, optopt, opterr;
 
 OPT o;
 
-#define LOOKUPTABLES_PATHNAME "lookuptablesMixed"
-
-
-
 int  main (int argc, char **argv);
 boost::program_options::variables_map initOpt(int argc, char **argv);
 void checkDistance (int argc, char **argv);
@@ -46,6 +42,7 @@ void exp1 (std::vector<std::string>);
 void exp2 (std::vector<std::string>);
 void exp3 (std::vector<std::string>);
 void exp4 (std::vector<std::string>);
+void exp5 (std::vector<std::string>);
 void ftest (std::vector<std::string>);
 
 boost::program_options::variables_map initOpt(int argc, char **argv) {
@@ -94,6 +91,7 @@ main (int argc, char **argv)
             case 2: exp2(files); break;
             case 3: exp3(files); break;
             case 4: exp4(files); break;
+            case 5: exp5(files); break;
             }
         }
     }
@@ -324,6 +322,33 @@ exp4 (std::vector<std::string> argv)
     std::cout << "naive: " << time_naive << std::endl;
     std::cout << "multi: " << time_multi << std::endl;
     std::cout << "cpu  : " << time_cpu   << std::endl;
+}
+
+//!
+// Check if DUST is working correctly with Simpson.
+//
+void
+exp5 (std::vector<std::string> argv)
+{
+    TimeSeriesCollection db( argv[0].c_str(), 2, -1 ); // distribution is normal
+    db.normalize();
+
+    GDUST gdust_montecarlo( db, Integrator::MonteCarlo );
+    GDUST gdust_simpson( db, Integrator::Simpson );
+
+    for (var i = 0; i < db.sequences.size() - 1; i++) {
+      for (var j = 1; j < db.sequences.size(); j++) {
+      TimeSeries &ts1 = db.sequences[i];
+      TimeSeries &ts2 = db.sequences[j];
+
+      double d_montecarlo, d_simpson;
+      d_montecarlo = gdust_montecarlo.distance(ts1, ts2);
+      d_simpson = gdust_simpson.distance(ts1, ts2);
+
+      std::cout << 'i: ' << i << ", j: " << j << std::endl;
+      std::cout << "MonteCarlo: \t" << d_montecarlo << std::endl;
+      std::cout << "Simpson: \t" << d_simpson << std::endl;
+    }
 }
 
 
