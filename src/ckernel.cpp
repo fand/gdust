@@ -1,13 +1,15 @@
 #include "ckernel.hpp"
 #include "randomvariable.hpp"
 #include "config.hpp"
-
 #include <cmath>
 #include <cstdlib>
-
-#include <omp.h>
 #include <cstdio>
+#include <omp.h>
 
+
+//
+// PDF functions
+//__________________
 
 inline double
 c_pdf_uniform (double lower, double upper, double x)
@@ -40,7 +42,6 @@ c_pdf_normal (double mean, double sd, double x)
     return result;
 }
 
-
 inline double
 c_myPDF (int distribution, double mean, double stddev, double v)
 {
@@ -59,46 +60,60 @@ c_myPDF (int distribution, double mean, double stddev, double v)
 }
 
 
-// calculate p(y|r(y)=v)p(r(y)=v)
+//
+// Integrand functions in dust
+//________________________________
+
+//!
+// Calculate p(x|r(x)=v)p(r(x)=v).
+//
+// @param {float}   v  - Random value
+// @param {float[]} xy - An array containing x & y
 inline double
-c_f1 (double v, double *params)
+c_f1 (double v, double *xy)
 {
-    double p1 = c_myPDF( params[ PARAM_X_DISTRIBUTION ],    // distribution
-                         0.0,                               // mean
-                         params[ PARAM_X_STDDEV ],          // stddev
-                         params[ PARAM_X_OBSERVATION ]-v ); // target
+    double p1 = c_myPDF( xy[ TUPLE_X_DISTRIBUTION ],     // distribution
+                         0.0,                            // mean
+                         xy[ TUPLE_X_STDDEV ],           // stddev
+                         xy[ TUPLE_X_OBSERVATION ]-v );  // target
 
     double p2 = c_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
 
     return p1 * p2;
 }
 
-
-// calculate p(y|r(y)=v)p(r(y)=v)
+//!
+// Calculate p(y|r(y)=v)p(r(y)=v).
+// Almost same as c_f1.
+//
 inline double
-c_f2 (double v, double *params)
+c_f2 (double v, double *xy)
 {
-    double p1 = c_myPDF( params[ PARAM_Y_DISTRIBUTION ],       // distribution
-                         0.0,                                  // mean
-                         params[ PARAM_Y_STDDEV ],             // stddev
-                         params[ PARAM_Y_OBSERVATION ] - v );  // target
+    double p1 = c_myPDF( xy[ TUPLE_Y_DISTRIBUTION ],       // distribution
+                         0.0,                              // mean
+                         xy[ TUPLE_Y_STDDEV ],             // stddev
+                         xy[ TUPLE_Y_OBSERVATION ] - v );  // target
 
     double p2 = c_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
 
     return p1 * p2;
 }
 
-
-// p(r(x)=z|x) * p(r(y)=z|y)
+//!
+// Calculate p(r(x)=z|x) * p(r(y)=z|y).
+//
+// @param {float}   z  - Random value
+// @param {float[]} xy - An array containing x & y
+//
 inline double
-c_f3 (double z, double *params)
+c_f3 (double z, double *xy)
 {
-    int    x_dist   = (int)params[ PARAM_X_DISTRIBUTION ];
-    double x        =      params[ PARAM_X_OBSERVATION ] - 0.1;
-    double x_stddev =      params[ PARAM_X_STDDEV ];
-    int    y_dist   = (int)params[ PARAM_Y_DISTRIBUTION ];
-    double y        =      params[ PARAM_Y_OBSERVATION ] + 0.1;
-    double y_stddev =      params[ PARAM_Y_STDDEV ];
+    int    x_dist   = (int)xy[ TUPLE_X_DISTRIBUTION ];
+    double x        =      xy[ TUPLE_X_OBSERVATION ] - 0.1;
+    double x_stddev =      xy[ TUPLE_X_STDDEV ];
+    int    y_dist   = (int)xy[ TUPLE_Y_DISTRIBUTION ];
+    double y        =      xy[ TUPLE_Y_OBSERVATION ] + 0.1;
+    double y_stddev =      xy[ TUPLE_Y_STDDEV ];
 
     double p1, p2;
 
@@ -133,27 +148,30 @@ c_f3 (double z, double *params)
     return p1 * p2;
 }
 
-
 double
-c_f4 (double k, double *params)
+c_f4 (double k, double *xy)
 {
     return 1.0;
 }
 
 
+//
+// Functions for dust / DUST
+//______________________________
+
 double
-c_dust_kernel (double *params, double *rands, int time)
+c_dust_kernel (double *xy, double *samples, int time)
 {
     double o1 = 0.0;
     double o2 = 0.0;
     double o3 = 0.0;
 
     int offset = time * 3 * INTEGRATION_SAMPLES;
-    double *local_rands = rands + offset;
+    double *local_samples = samples + offset;
     for (int i = 0; i < INTEGRATION_SAMPLES; ++i) {
-        o1 += c_f1(local_rands[i * 3    ], params);
-        o2 += c_f2(local_rands[i * 3 + 1], params);
-        o3 += c_f3(local_rands[i * 3 + 2], params);
+        o1 += c_f1(local_samples[i * 3    ], xy);
+        o2 += c_f2(local_samples[i * 3 + 1], xy);
+        o3 += c_f3(local_samples[i * 3 + 2], xy);
     }
 
     double r = (double) RANGE_WIDTH / INTEGRATION_SAMPLES;

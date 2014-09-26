@@ -1,8 +1,12 @@
 #include "kernel.hpp"
 #include "randomvariable.hpp"
 #include "config.hpp"
-
 #include <stdio.h>
+
+
+//
+// PDF functions
+//__________________
 
 __device__ float
 g_pdf_uniform (float lower, float upper, float x)
@@ -35,7 +39,6 @@ g_pdf_normal (float mean, float sd, float x)
     return result;
 }
 
-
 __device__ float
 g_myPDF (int distribution, float mean, float stddev, float v)
 {
@@ -54,46 +57,119 @@ g_myPDF (int distribution, float mean, float stddev, float v)
 }
 
 
-// calculate p(y|r(y)=v)p(r(y)=v)
+//
+// Integrand functions in dust
+//________________________________
+
+//!
+// Calculate p(x|r(x)=v)p(r(x)=v).
+//
+// @param {float}   v  - Random value
+// @param {float[]} xy - An array containing x & y
 __device__ float
-g_f1 (float v, float *params)
+g_f1 (float v, float *xy)
 {
-    float p1 = g_myPDF( params[ PARAM_X_DISTRIBUTION ],   // distribution
-                        0.0f,                                // mean
-                        params[ PARAM_X_STDDEV ],         // stddev
-                        params[ PARAM_X_OBSERVATION ]-v ); // target
+    float p1 = g_myPDF( xy[ TUPLE_X_DISTRIBUTION ],     // distribution
+                        0.0f,                           // mean
+                        xy[ TUPLE_X_STDDEV ],           // stddev
+                        xy[ TUPLE_X_OBSERVATION ]-v );  // target
 
     float p2 = g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
 
     return p1 * p2;
 }
 
-
-// calculate p(y|r(y)=v)p(r(y)=v)
+//!
+// Calculate p(y|r(y)=v)p(r(y)=v).
+// Almost same as g_f1.
+//
 __device__ float
-g_f2 (float v, float *params)
+g_f2 (float v, float *xy)
 {
-    float p1 = g_myPDF( params[ PARAM_Y_DISTRIBUTION ],   // distribution
-                        0.0f,                                // mean
-                        params[ PARAM_Y_STDDEV ],         // stddev
-                        params[ PARAM_Y_OBSERVATION ] - v );  // target
+    float p1 = g_myPDF( xy[ TUPLE_Y_DISTRIBUTION ],       // distribution
+                        0.0f,                             // mean
+                        xy[ TUPLE_Y_STDDEV ],             // stddev
+                        xy[ TUPLE_Y_OBSERVATION ] - v );  // target
 
     float p2 = g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
 
     return p1 * p2;
 }
 
+//!
+// Calculate p(r(x)=z|x) * p(r(y)=z|y).
+//
+// @param {float}   z  - Random value
+// @param {float[]} xy - An array containing x & y
+//
+__device__ float
+g_f3 (float z, float *xy)
+{
+    int   x_dist   = (int)xy[ TUPLE_X_DISTRIBUTION ];
+    float x        =      xy[ TUPLE_X_OBSERVATION ] - 0.1f;
+    float x_stddev =      xy[ TUPLE_X_STDDEV ];
+    int   y_dist   = (int)xy[ TUPLE_Y_DISTRIBUTION ];
+    float y        =      xy[ TUPLE_Y_OBSERVATION ] + 0.1f;
+    float y_stddev =      xy[ TUPLE_Y_STDDEV ];
+
+    float p1, p2;
+
+    if (x_dist == RANDVAR_UNIFORM) {
+        float x_adjust = 0;
+        float y_adjust = 0;
+
+        if (abs(x-z) > x_stddev * SQRT3) {
+            x_adjust = g_myPDF( x_dist, 0, x_stddev, 0 ) *
+                ( 1 + erf( -( abs(x-z) - x_stddev * SQRT3 ) ) );
+        }
+
+        if (abs(y-z) > y_stddev * SQRT3) {
+            y_adjust = g_myPDF( y_dist, 0, y_stddev, 0 ) *
+                ( 1 + erf( -( abs(y-z) - y_stddev * SQRT3 ) ) );
+        }
+
+        float pdf_x = g_myPDF( x_dist, 0.0f, x_stddev, x-z ) + x_adjust;
+        float pdf_y = g_myPDF( y_dist, 0.0f, y_stddev, y-z ) + y_adjust;
+
+        p1 = pdf_x * g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
+        p2 = pdf_y * g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
+    }
+    else {
+        // p(r(x)=z|x) and p(r(y)=z|y)
+        p1 = ( g_myPDF( x_dist, 0, x_stddev, x-z ) *
+               g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
+        p2 = ( g_myPDF( y_dist, 0, y_stddev, y-z ) *
+               g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
+    }
+
+    return p1 * p2;
+}
+
+__device__ float
+g_f4 (float k, float *xy)
+{
+    return 1.0f;
+}
+
+// calculate p(y|r(y)=v)p(r(y)=v)
+__device__ float
+g_f12_multi (float v, float *x)
+{
+    float p1 = g_myPDF( x[0], 0.0f, x[2], x[1] - v );
+    float p2 = g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
+    return p1 * p2;
+}
 
 // p(r(x)=z|x) * p(r(y)=z|y)
 __device__ float
-g_f3 (float z, float *params)
+g_f3_multi (float z, float *x_, float *y_)
 {
-    int   x_dist   = (int)params[ PARAM_X_DISTRIBUTION ];
-    float x        =      params[ PARAM_X_OBSERVATION ] - 0.1f;
-    float x_stddev =      params[ PARAM_X_STDDEV ];
-    int   y_dist   = (int)params[ PARAM_Y_DISTRIBUTION ];
-    float y        =      params[ PARAM_Y_OBSERVATION ] + 0.1f;
-    float y_stddev =      params[ PARAM_Y_STDDEV ];
+    int   x_dist   = (int)x_[0];
+    float x        =      x_[1] - 0.1f;
+    float x_stddev =      x_[2];
+    int   y_dist   = (int)y_[0];
+    float y        =      y_[1] + 0.1f;
+    float y_stddev =      y_[2];
 
     float p1, p2;
 
@@ -129,32 +205,29 @@ g_f3 (float z, float *params)
 }
 
 
-__device__ float
-g_f4 (float k, float *params)
-{
-    return 1.0f;
-}
-
+//
+// Functions for dust / DUST
+//______________________________
 
 // With seq on global memory
 __global__ void
-g_distance_kernel (float *seq_GPU,
+g_distance_kernel (float *tuples_GPU,
                    float *samples_GPU,
                    float *dust_GPU)
 {
-    float *p_param = seq_GPU  + blockIdx.x * PARAM_SIZE;
-    float *p_dust  = dust_GPU + blockIdx.x;
+    float *tuple = tuples_GPU  + blockIdx.x * TUPLE_SIZE;
+    float *dust  = dust_GPU + blockIdx.x;
 
-    g_dust_kernel(p_param, samples_GPU, p_dust);
+    g_dust_kernel(tuple, samples_GPU, dust);
 }
 
 
 __device__ void
-g_dust_kernel (float *params,
-               float *in,
+g_dust_kernel (float *tuple,
+               float *samples,
                float *answer_GPU)
 {
-    float in1, in2, in3;
+    float sample1, sample2, sample3;
     int offset1 = blockIdx.x * INTEGRATION_SAMPLES;
     int offset2 = offset1 + INTEGRATION_SAMPLES * gridDim.x;
     int offset3 = offset2 + INTEGRATION_SAMPLES * gridDim.x;
@@ -170,12 +243,12 @@ g_dust_kernel (float *params,
     // MAP PHASE
     // put (f1, f2, f3) into (o1, o2, o3) for all samples
     for (int i = threadIdx.x; i < INTEGRATION_SAMPLES; i += blockDim.x) {
-        in1 = in[i + offset1] * RANGE_WIDTH + RANGE_MIN;
-        in2 = in[i + offset2] * RANGE_WIDTH + RANGE_MIN;
-        in3 = in[i + offset3] * RANGE_WIDTH + RANGE_MIN;
-        o1 += g_f1( in1, params );
-        o2 += g_f2( in2, params );
-        o3 += g_f3( in3, params );
+        sample1 = samples[i + offset1] * RANGE_WIDTH + RANGE_MIN;
+        sample2 = samples[i + offset2] * RANGE_WIDTH + RANGE_MIN;
+        sample3 = samples[i + offset3] * RANGE_WIDTH + RANGE_MIN;
+        o1 += g_f1( sample1, tuple );
+        o2 += g_f2( sample2, tuple );
+        o3 += g_f3( sample3, tuple );
     }
 
     // REDUCE PHASE
@@ -290,25 +363,26 @@ g_reduceBlock (float *sdata1, float *sdata2, float *sdata3)
     }
 }
 
-
-// With seq on global memory
+//!
+// With seq on global memory.
+//
 __global__ void
 g_match (float *ts_GPU,
-         float *db_GPU,
+         float *tsc_GPU,
          float *dust_GPU,
          size_t ts_length,
-         size_t db_num,
-         float *in)
+         size_t ts_num,
+         float *samples)
 {
     int time = blockIdx.x;
 
-    float in1, in2, in3;
+    float sample1, sample2, sample3;
     int offset1 = blockIdx.x * INTEGRATION_SAMPLES;
-    int offset2 = offset1 + INTEGRATION_SAMPLES * gridDim.x * db_num;  // 50000 * lim * 1 + offset1
-    int offset3 = offset2 + INTEGRATION_SAMPLES * gridDim.x * db_num;  // 50000 * lim * 2 + offset1
-    float *samples1 = &in[offset1];
-    float *samples2 = &in[offset2];
-    float *samples3 = &in[offset3];
+    int offset2 = offset1 + INTEGRATION_SAMPLES * gridDim.x * ts_num;  // 50000 * lim * 1 + offset1
+    int offset3 = offset2 + INTEGRATION_SAMPLES * gridDim.x * ts_num;  // 50000 * lim * 2 + offset1
+    float *samples1 = &samples[offset1];
+    float *samples2 = &samples[offset2];
+    float *samples3 = &samples[offset3];
 
     float o1 = 0.0f;
     float o2 = 0.0f;
@@ -318,23 +392,23 @@ g_match (float *ts_GPU,
     __shared__ float sdata2[TPB];
     __shared__ float sdata3[TPB];
 
-    float *dusts = &dust_GPU[db_num * time];
+    float *dusts = &dust_GPU[ts_num * time];
     float r = (float)RANGE_WIDTH / INTEGRATION_SAMPLES;
 
-    float *db = &db_GPU[db_num * time * 3];  // db for this block
+    float *tsc = &tsc_GPU[ts_num * time * 3];  // db for this block
     float *x  = &ts_GPU[time * 3];           // TODO: compute f1 only once.
 
-    for (int i = 0; i < db_num; i++) {
-        float *y = &db[i * 3];
+    for (int i = 0; i < ts_num; i++) {
+        float *y = &tsc[i * 3];
         o1 = o2 = o3 = 0.0f;
         for (int j = threadIdx.x; j < INTEGRATION_SAMPLES; j += blockDim.x) {
-            in1 = samples1[i * db_num + j] * RANGE_WIDTH + RANGE_MIN;
-            in2 = samples2[i * db_num + j] * RANGE_WIDTH + RANGE_MIN;
-            in3 = samples3[i * db_num + j] * RANGE_WIDTH + RANGE_MIN;
+            sample1 = samples1[i * ts_num + j] * RANGE_WIDTH + RANGE_MIN;
+            sample2 = samples2[i * ts_num + j] * RANGE_WIDTH + RANGE_MIN;
+            sample3 = samples3[i * ts_num + j] * RANGE_WIDTH + RANGE_MIN;
 
-            o1 += g_f12_multi( in1, x );
-            o2 += g_f12_multi( in2, y );
-            o3 += g_f3_multi( in3, x, y );
+            o1 += g_f12_multi( sample1, x );
+            o2 += g_f12_multi( sample2, y );
+            o3 += g_f3_multi( sample3, x, y );
         }
 
         sdata1[threadIdx.x] = o1;
@@ -356,85 +430,33 @@ g_match (float *ts_GPU,
             float dust = -log10(int3 / (int1 * int2));
             if (dust < 0.0) { dust = 0.0f; }
 
-            // printf("%d:%d: \t %f \t %f \t %f\n", i, time, int1, int2, int3);
-
             dusts[i] = dust;
         }
     }
 }
 
 
-// calculate p(y|r(y)=v)p(r(y)=v)
-__device__ float
-g_f12_multi (float v, float *x)
-{
-    float p1 = g_myPDF( x[0], 0.0f, x[2], x[1] - v );
-    float p2 = g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, v );
-    return p1 * p2;
-}
-
-
-// p(r(x)=z|x) * p(r(y)=z|y)
-__device__ float
-g_f3_multi (float z, float *x_, float *y_)
-{
-    int   x_dist   = (int)x_[0];
-    float x        =      x_[1] - 0.1f;
-    float x_stddev =      x_[2];
-    int   y_dist   = (int)y_[0];
-    float y        =      y_[1] + 0.1f;
-    float y_stddev =      y_[2];
-
-    float p1, p2;
-
-    if (x_dist == RANDVAR_UNIFORM) {
-        float x_adjust = 0;
-        float y_adjust = 0;
-
-        if (abs(x-z) > x_stddev * SQRT3) {
-            x_adjust = g_myPDF( x_dist, 0, x_stddev, 0 ) *
-                ( 1 + erf( -( abs(x-z) - x_stddev * SQRT3 ) ) );
-        }
-
-        if (abs(y-z) > y_stddev * SQRT3) {
-            y_adjust = g_myPDF( y_dist, 0, y_stddev, 0 ) *
-                ( 1 + erf( -( abs(y-z) - y_stddev * SQRT3 ) ) );
-        }
-
-        float pdf_x = g_myPDF( x_dist, 0.0f, x_stddev, x-z ) + x_adjust;
-        float pdf_y = g_myPDF( y_dist, 0.0f, y_stddev, y-z ) + y_adjust;
-
-        p1 = pdf_x * g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
-        p2 = pdf_y * g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z );
-    }
-    else {
-        // p(r(x)=z|x) and p(r(y)=z|y)
-        p1 = ( g_myPDF( x_dist, 0, x_stddev, x-z ) *
-               g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
-        p2 = ( g_myPDF( y_dist, 0, y_stddev, y-z ) *
-               g_pdf_uniform( -RANGE_VALUE, RANGE_VALUE, z ) );
-    }
-
-    return p1 * p2;
-}
+//
+// for Test
+//_____________
 
 __global__ void
-g_f123_test(float *param, float *results)
+g_f123_test(float *xy, float *results)
 {
     __syncthreads();
 
-    float *x = param;
-    float *y = param + 3;
+    float *x = xy;
+    float *y = xy + 3;
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     float v = (x[1] + y[1]) * 0.5;
-    results[0] += g_f1(v, param);
+    results[0] += g_f1(v, xy);
     results[1] += g_f12_multi(v, x);
 
-    results[2] += g_f2(v, param);
+    results[2] += g_f2(v, xy);
     results[3] += g_f12_multi(v, y);
 
-    results[4] += g_f3(v, param);
+    results[4] += g_f3(v, xy);
     results[5] += g_f3_multi(v, x, y);
 }
