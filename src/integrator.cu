@@ -19,43 +19,45 @@ Integrator::~Integrator()
 
 Integrator::Integrator()
 {
-    size_t size = sizeof(float) * INTEGRATION_SAMPLES;
-
     this->gen = new curandGenerator_t();
     curandCreateGenerator( this->gen, CURAND_RNG_PSEUDO_MTGP32 );
     curandSetPseudoRandomGeneratorSeed( *(this->gen), 1234ULL );
 }
 
-
+/**
+ * Compute DUST for 2 time series.
+ *
+ */
 float
 Integrator::distance (TimeSeries &ts1, TimeSeries &ts2, int n)
 {
-    size_t seq_size  = sizeof(float) * n * PARAM_SIZE;
+    size_t tuples_size  = sizeof(float) * n * TUPLE_SIZE;
     size_t dust_size = sizeof(float) * n;
 
     // copy ts1, ts2 to memory
-    float *seq, *dust, *seq_GPU, *dust_GPU;
-    seq  = (float*)malloc(seq_size);
+    float *tuples, *dust, *tuples_GPU, *dust_GPU;
+    tuples  = (float*)malloc(tuples_size);
     dust = (float*)malloc(dust_size);
-    checkCudaErrors(cudaMalloc((void**)&seq_GPU, seq_size));
+    checkCudaErrors(cudaMalloc((void**)&tuples_GPU, tuples_size));
     checkCudaErrors(cudaMalloc((void**)&dust_GPU, dust_size));
 
+    int idx = 0;
     for (int i = 0; i < n; i++) {
         RandomVariable x = ts1.at(i);
         RandomVariable y = ts2.at(i);
 
-        int j = PARAM_SIZE * i;
-        seq[j]   = (float)x.distribution;
-        seq[j+1] = x.observation;
-        seq[j+2] = x.stddev;
-        seq[j+3] = (float)y.distribution;
-        seq[j+4] = y.observation;
-        seq[j+5] = y.stddev;
+        tuples[idx]   = (float)x.distribution;
+        tuples[idx+1] = x.observation;
+        tuples[idx+2] = x.stddev;
+        tuples[idx+3] = (float)y.distribution;
+        tuples[idx+4] = y.observation;
+        tuples[idx+5] = y.stddev;
+        idx += TUPLE_SIZE;
     }
 
-    checkCudaErrors(cudaMemcpy( seq_GPU,
-                                seq,
-                                seq_size,
+    checkCudaErrors(cudaMemcpy( tuples_GPU,
+                                tuples,
+                                tuples_size,
                                 cudaMemcpyHostToDevice ));
 
     // generate uniform random number on samples_GPU
@@ -65,160 +67,150 @@ Integrator::distance (TimeSeries &ts1, TimeSeries &ts2, int n)
 
 
     // call kernel
-    g_distance_kernel<<< n, TPB >>>(seq_GPU, samples_GPU, dust_GPU);
+    g_distance_kernel<<< n, TPB >>>(tuples_GPU, samples_GPU, dust_GPU);
 
     checkCudaErrors(cudaMemcpy( dust,
                                 dust_GPU,
                                 dust_size,
                                 cudaMemcpyDeviceToHost ));
 
-
     float dist = 0;
     for (int i=0; i < n; i++) {
         dist += dust[i];
     }
 
-
-    checkCudaErrors(cudaFree( seq_GPU ));
+    free(tuples);
+    free(dust);
+    checkCudaErrors(cudaFree( tuples_GPU ));
     checkCudaErrors(cudaFree( dust_GPU ));
     checkCudaErrors(cudaFree( samples_GPU ));
-
-    free(seq);
-    free(dust);
 
     return sqrt(dist);
 }
 
-
+// Match 1 ts to all ts in tsc.
+// Repeat Integrator::distance for all combination.
 void
-Integrator::match_naive (TimeSeries &ts, TimeSeriesCollection &db)
+Integrator::match_naive (TimeSeries &ts, TimeSeriesCollection &tsc)
 {
     // Determine the length of time series.
-    unsigned int lim = ts.length();
+    unsigned int ts_length = ts.length();
 
-    for (int i = 0; i < db.sequences.size(); i++) {
-        lim = min(lim, db.sequences[i].length());
+    for (int i = 0; i < tsc.sequences.size(); i++) {
+        ts_length = min(ts_length, tsc.sequences[i].length());
     }
 
     float DUST_min;
     float i_min;
-
-    for (int i = 0; i < db.sequences.size(); i++) {
-        float DUST = this->distance(ts, db.sequences[i], lim);
-
-        // std::cout << "CPU " << i << ": " << DUST << std::endl;
-
+    for (int i = 0; i < tsc.sequences.size(); i++) {
+        float DUST = this->distance(ts, tsc.sequences[i], ts_length);
         if (DUST < DUST_min || i == 0) {
             DUST_min = DUST;
             i_min = i;
         }
     }
 
-    std::cout << "matched : " << lim << std::endl;
+    std::cout << "matched : " << ts_length << std::endl;
     std::cout << "\t index: " << i_min << ", distance : " << DUST_min << std::endl;
 }
 
 
+// Match 1 ts to all ts in tsc
+// Optimized version.
 void
-Integrator::match (TimeSeries &ts, TimeSeriesCollection &db)
+Integrator::match (TimeSeries &ts, TimeSeriesCollection &tsc)
 {
     // Determine the length of time series.
-    size_t db_num = db.sequences.size();
-    unsigned int lim = ts.length();
-    for (int i=0; i < db_num; i++) {
-        lim = min(lim, db.sequences[i].length());
+    size_t ts_num = tsc.sequences.size();
+    unsigned int ts_length = ts.length();
+    for (int i = 0; i < ts_num; i++) {
+        ts_length = min(ts_length, tsc.sequences[i].length());
     }
 
-    // db needs (3 * float * lim * db_num) bytes =~ 3*4*150*200
-    // can settle on global memory.
-    size_t db_size = sizeof(float) * 3 * db_num * lim;
-    float *db_CPU, *db_GPU;
-    db_CPU = (float*)malloc(db_size);
-    checkCudaErrors(cudaMalloc((void**)&db_GPU, db_size));
-
-    size_t dust_size = sizeof(float) * db_num * lim;
+    // db needs (3 * float * ts_length * ts_num) bytes =~ 3*4*150*200
+    float *ts_CPU, *ts_GPU;
+    float *tsc_CPU, *tsc_GPU;
     float *dust_CPU, *dust_GPU;
+    size_t ts_size = sizeof(float) * ts_length * 3;
+    size_t tsc_size = sizeof(float) * ts_num * ts_length * 3;
+    size_t dust_size = sizeof(float) * ts_num * ts_length;
+    ts_CPU = (float*)malloc(ts_size);
+    tsc_CPU = (float*)malloc(tsc_size);
     dust_CPU = (float*)malloc(dust_size);
+    checkCudaErrors(cudaMalloc((void**)&ts_GPU, ts_size));
+    checkCudaErrors(cudaMalloc((void**)&tsc_GPU, tsc_size));
     checkCudaErrors(cudaMalloc((void**)&dust_GPU, dust_size));
 
+    // Copy & load data.
     int idx = 0;
-    for (int i = 0; i < lim; i++) {
-        for (int j = 0; j < db_num; j++) {
-            RandomVariable x = db.sequences[j].at(i);
-            db_CPU[idx++] = (float)x.distribution;
-            db_CPU[idx++] = x.observation;
-            db_CPU[idx++] = x.stddev;
-        }
-    }
-
-    size_t ts_size = sizeof(float) * lim * 3;
-    float *ts_CPU, *ts_GPU;
-    ts_CPU = (float*)malloc(ts_size);
-    checkCudaErrors(cudaMalloc((void**)&ts_GPU, ts_size));
-    idx = 0;
-    for (int i = 0; i < lim; i++) {
+    for (int i = 0; i < ts_length; i++) {
         RandomVariable x = ts.at(i);
         ts_CPU[idx++] = (float)x.distribution;
         ts_CPU[idx++] = x.observation;
         ts_CPU[idx++] = x.stddev;
     }
-
-    checkCudaErrors(cudaMemcpy( db_GPU,
-                                db_CPU,
-                                db_size,
-                                cudaMemcpyHostToDevice ));
-
+    idx = 0;
+    for (int i = 0; i < ts_length; i++) {
+        for (int j = 0; j < ts_num; j++) {
+            RandomVariable x = tsc.sequences[j].at(i);
+            tsc_CPU[idx++] = (float)x.distribution;
+            tsc_CPU[idx++] = x.observation;
+            tsc_CPU[idx++] = x.stddev;
+        }
+    }
     checkCudaErrors(cudaMemcpy( ts_GPU,
                                 ts_CPU,
                                 ts_size,
                                 cudaMemcpyHostToDevice ));
+    checkCudaErrors(cudaMemcpy( tsc_GPU,
+                                tsc_CPU,
+                                tsc_size,
+                                cudaMemcpyHostToDevice ));
 
-    // generate uniform random number on samples_GPU
+    // Generate uniform random number on samples_GPU.
     float *samples_GPU;
-    checkCudaErrors(cudaMalloc( (void**)&samples_GPU, sizeof(float) * INTEGRATION_SAMPLES * lim * db_num * 3));
-    curandGenerateUniform( *(this->gen), samples_GPU, INTEGRATION_SAMPLES * lim * db_num * 3);
-
+    size_t samples_num = INTEGRATION_SAMPLES * ts_length * ts_num * 3;
+    checkCudaErrors(cudaMalloc( (void**)&samples_GPU, sizeof(float) * samples_num));
+    curandGenerateUniform( *(this->gen), samples_GPU, samples_num);
 
     // DO THE STUFF
-    g_match<<< lim, TPB >>>( ts_GPU,
-                             db_GPU,
+    g_match<<< ts_length, TPB >>>( ts_GPU,
+                             tsc_GPU,
                              dust_GPU,
-                             lim,
-                             db_num,
+                             ts_length,
+                             ts_num,
                              samples_GPU );
 
+    // Return results.
     checkCudaErrors(cudaMemcpy( dust_CPU,
                                 dust_GPU,
                                 dust_size,
                                 cudaMemcpyDeviceToHost ));
 
+    // Compare DUST & get i for smallest DUST.
     float DUST_min;
     int i_min = 0;
-
-    for (int i = 0; i < db_num; i++) {
+    for (int i = 0; i < ts_num; i++) {
         float dist = 0;
-        for (int j = 0; j < lim; j++) {
-            dist += dust_CPU[db_num * j + i];
+        for (int j = 0; j < ts_length; j++) {
+            dist += dust_CPU[ts_num * j + i];
         }
 
         float DUST = sqrt(dist);
-        // std::cout << "GPU " << i << ": " << DUST << std::endl;
         if (DUST < DUST_min || i == 0) {
             DUST_min = DUST;
             i_min = i;
         }
     }
 
-    // std::cout << "db_num : " << db_num << std::endl;
-    // std::cout << "lim : " << lim << std::endl;
-    std::cout << "matched : " << lim << std::endl;
+    std::cout << "matched : " << ts_length << std::endl;
     std::cout << "\t index: " << i_min << ", distance: " << DUST_min << std::endl;
 
-    free(db_CPU);
-    free(dust_CPU);
+    free(tsc_CPU);
     free(ts_CPU);
-    checkCudaErrors(cudaFree(db_GPU));
-    checkCudaErrors(cudaFree(dust_GPU));
+    free(dust_CPU);
+    checkCudaErrors(cudaFree(tsc_GPU));
     checkCudaErrors(cudaFree(ts_GPU));
+    checkCudaErrors(cudaFree(dust_GPU));
     checkCudaErrors(cudaFree(samples_GPU));
 }
