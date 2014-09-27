@@ -209,21 +209,21 @@ simpson_f1 (float left, float width, float *tuple)
 {
   float mid = left + width * 0.5;
   float right = left + width;
-  return (width / 3) * (g_f1(left, tuple) + g_f1(right, tuple) + g_f1(mid, tuple) * 4);
+  return (width / 6) * (g_f1(left, tuple) + g_f1(right, tuple) + g_f1(mid, tuple) * 4);
 }
 __device__ float
 simpson_f2 (float left, float width, float *tuple)
 {
   float mid = left + width * 0.5;
   float right = left + width;
-  return (width / 3) * (g_f2(left, tuple) + g_f2(right, tuple) + g_f2(mid, tuple) * 4);
+  return (width / 6) * (g_f2(left, tuple) + g_f2(right, tuple) + g_f2(mid, tuple) * 4);
 }
 __device__ float
 simpson_f3 (float left, float width, float *tuple)
 {
   float mid = left + width * 0.5;
   float right = left + width;
-  return (width / 3) * (g_f3(left, tuple) + g_f3(right, tuple) + g_f3(mid, tuple) * 4);
+  return (width / 6) * (g_f3(left, tuple) + g_f3(right, tuple) + g_f3(mid, tuple) * 4);
 }
 
 
