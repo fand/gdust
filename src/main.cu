@@ -43,6 +43,8 @@ void exp2 (std::vector<std::string>);
 void exp3 (std::vector<std::string>);
 void exp4 (std::vector<std::string>);
 void exp5 (std::vector<std::string>);
+void exp6 (std::vector<std::string>);
+void exp7 (std::vector<std::string>);
 void ftest (std::vector<std::string>);
 
 boost::program_options::variables_map initOpt(int argc, char **argv) {
@@ -92,6 +94,8 @@ main (int argc, char **argv)
             case 3: exp3(files); break;
             case 4: exp4(files); break;
             case 5: exp5(files); break;
+            case 6: exp6(files); break;
+            case 7: exp7(files); break;
             }
         }
     }
@@ -353,6 +357,78 @@ exp5 (std::vector<std::string> argv)
   }
 }
 
+// $ bin/gdustdtw exp/Gun_Point_error_3 exp/Gun_Point_error_7
+void
+exp6 (std::vector<std::string> argv)
+{
+    TimeSeriesCollection db( argv[0].c_str(), 2, -1 ); // distribution is normal
+    TimeSeriesCollection db2( argv[1].c_str(), 2, -1 ); // distribution is normal
+    db.normalize();
+    db2.normalize();
+    TimeSeries &ts = db2.sequences[0];
+
+    GDUST gdust( db );
+    GDUST gdust_simpson( db, Integrator::Simpson );
+    DUST  dust( db );
+
+    gdust.match(ts);
+    gdust_simpson.match(ts);
+    dust.match(ts);
+}
+
+// Check execution time of Simpson match
+void
+exp7 (std::vector<std::string> argv)
+{
+    TimeSeriesCollection db( argv[0].c_str(), 2, -1 ); // distribution is normal
+    db.normalize();
+    TimeSeriesCollection db2( argv[1].c_str(), 2, -1 ); // distribution is normal
+    db2.normalize();
+
+    GDUST gdust( db );
+    GDUST gdust_simpson( db, Integrator::Simpson );
+    DUST  dust( db );
+    Watch watch;
+
+    double time_montecarlo_naive = 0;
+    double time_simpson_naive = 0;
+    double time_montecarlo = 0;
+    double time_simpson = 0;
+    double time_cpu = 0;
+
+    TimeSeries &ts = db2.sequences[0];
+
+    watch.start();
+    gdust.match_naive(ts);
+    watch.stop();
+    time_montecarlo_naive = watch.getInterval();
+
+    watch.start();
+    gdust.match(ts);
+    watch.stop();
+    time_montecarlo = watch.getInterval();
+
+    watch.start();
+    gdust_simpson.match_naive(ts);
+    watch.stop();
+    time_simpson_naive = watch.getInterval();
+
+    watch.start();
+    gdust_simpson.match(ts);
+    watch.stop();
+    time_simpson = watch.getInterval();
+
+    watch.start();
+    dust.match(ts);
+    watch.stop();
+    time_cpu = watch.getInterval();
+
+    std::cout << "montecarlo_naive: " << time_montecarlo_naive << std::endl;
+    std::cout << "montecarlo: " << time_montecarlo << std::endl;
+    std::cout << "simpson_naive: " << time_simpson_naive << std::endl;
+    std::cout << "simpson: " << time_simpson << std::endl;
+    std::cout << "cpu  : " << time_cpu   << std::endl;
+}
 
 void
 cleanUp()
