@@ -204,6 +204,28 @@ g_f3_multi (float z, float *x_, float *y_)
     return p1 * p2;
 }
 
+__device__ float
+simpson_f1 (float left, float width, float *tuple)
+{
+  float mid = left + width * 0.5;
+  float right = left + width;
+  return (width / 3) * (g_f1(left, tuple) + g_f1(right, tuple) + g_f1(mid, tuple) * 4);
+}
+__device__ float
+simpson_f2 (float left, float width, float *tuple)
+{
+  float mid = left + width * 0.5;
+  float right = left + width;
+  return (width / 3) * (g_f2(left, tuple) + g_f2(right, tuple) + g_f2(mid, tuple) * 4);
+}
+__device__ float
+simpson_f3 (float left, float width, float *tuple)
+{
+  float mid = left + width * 0.5;
+  float right = left + width;
+  return (width / 3) * (g_f3(left, tuple) + g_f3(right, tuple) + g_f3(mid, tuple) * 4);
+}
+
 
 //
 // Functions for dust / DUST
@@ -275,6 +297,60 @@ g_dust_kernel (float *tuple,
     }
 }
 
+// With seq on global memory
+__global__ void
+g_distance_simpson_kernel (float *tuples_GPU,
+                           float *dust_GPU,
+                           int division)
+{
+    float *tuple = tuples_GPU  + blockIdx.x * TUPLE_SIZE;
+    float *dust  = dust_GPU + blockIdx.x;
+    g_dust_simpson_kernel(tuple, dust, division);
+}
+
+__device__ void
+g_dust_simpson_kernel (float *tuple,
+                       float *answer_GPU,
+                       int division)
+{
+    float o1 = 0.0f;
+    float o2 = 0.0f;
+    float o3 = 0.0f;
+    __shared__ float sdata1[TPB];
+    __shared__ float sdata2[TPB];
+    __shared__ float sdata3[TPB];
+
+    float width = RANGE_WIDTH / (float)division;
+    // MAP PHASE
+    // put (f1, f2, f3) into (o1, o2, o3) for all samples
+    for (int i = threadIdx.x; i < division; i += blockDim.x) {
+        float window_left = width * i + RANGE_MIN;
+        o1 += simpson_f1( window_left, width, tuple );
+        o2 += simpson_f2( window_left, width, tuple );
+        o3 += simpson_f3( window_left, width, tuple );
+    }
+
+    // REDUCE PHASE
+    // Get sum of (o1, o2, o3) for all threads
+    sdata1[threadIdx.x] = o1;
+    sdata2[threadIdx.x] = o2;
+    sdata3[threadIdx.x] = o3;
+    g_reduceBlock<TPB>(sdata1, sdata2, sdata3);
+
+    if (threadIdx.x == 0) {
+        float int1 = sdata1[0];
+        if (int1 < VERYSMALL) int1 = VERYSMALL;
+        float int2 = sdata2[0];
+        if (int2 < VERYSMALL) int2 = VERYSMALL;
+        float int3 = sdata3[0];
+        if (int3 < 0.0f) int3 = 0.0f;
+
+        float dust = -log10(int3 / (int1 * int2));
+
+        if (dust < 0.0) { dust = 0.0f; }
+        *answer_GPU = dust;
+    }
+}
 
 
 template<unsigned int blockSize>
@@ -447,8 +523,6 @@ g_f123_test(float *xy, float *results)
 
     float *x = xy;
     float *y = xy + 3;
-
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     float v = (x[1] + y[1]) * 0.5;
     results[0] += g_f1(v, xy);

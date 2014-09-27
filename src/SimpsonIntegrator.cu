@@ -16,12 +16,12 @@ SimpsonIntegrator::SimpsonIntegrator()
     curandSetPseudoRandomGeneratorSeed( *(this->gen), 1234ULL );
 }
 
-SimpsonIntegrator::~SimpsonIntegrator()
-{
+SimpsonIntegrator::~SimpsonIntegrator(){
     curandDestroyGenerator( *(this->gen) );
 }
 
-//!
+
+///
 // Compute DUST for 2 time series.
 //
 float
@@ -56,14 +56,8 @@ SimpsonIntegrator::distance (TimeSeries &ts1, TimeSeries &ts2, int ts_length)
                                 tuples_size,
                                 cudaMemcpyHostToDevice ));
 
-    // generate uniform random number on samples_GPU
-    float *samples_GPU;
-    checkCudaErrors(cudaMalloc( (void**)&samples_GPU, sizeof(float) * INTEGRATION_SAMPLES * ts_length * 3));
-    curandGenerateUniform( *(this->gen), samples_GPU, INTEGRATION_SAMPLES * ts_length * 3 );
-
-
     // call kernel
-    g_distance_kernel<<< ts_length, TPB >>>(tuples_GPU, samples_GPU, dusts_GPU);
+    g_distance_simpson_kernel<<< ts_length, TPB >>>(tuples_GPU, dusts_GPU, 1024);
 
     checkCudaErrors(cudaMemcpy( dusts,
                                 dusts_GPU,
@@ -79,7 +73,6 @@ SimpsonIntegrator::distance (TimeSeries &ts1, TimeSeries &ts2, int ts_length)
     free(dusts);
     checkCudaErrors(cudaFree( tuples_GPU ));
     checkCudaErrors(cudaFree( dusts_GPU ));
-    checkCudaErrors(cudaFree( samples_GPU ));
 
     return sqrt(dust_sum);
 }

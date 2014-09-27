@@ -1,8 +1,11 @@
 #pragma once
-
 #include <curand.h>
 #include "timeseries.hpp"
 #include "timeseriescollection.hpp"
+
+///
+// Integrators for dust
+//
 
 class Integrator
 {

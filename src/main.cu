@@ -345,7 +345,8 @@ exp5 (std::vector<std::string> argv)
       d_montecarlo = gdust_montecarlo.distance(ts1, ts2);
       d_simpson = gdust_simpson.distance(ts1, ts2);
 
-      std::cout << 'i: ' << i << ", j: " << j << std::endl;
+      std::cout << "#######################" << std::endl;
+      std::cout << "i: " << i << ", j: " << j << std::endl;
       std::cout << "MonteCarlo: \t" << d_montecarlo << std::endl;
       std::cout << "Simpson: \t" << d_simpson << std::endl;
     }
