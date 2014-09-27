@@ -330,14 +330,14 @@ exp4 (std::vector<std::string> argv)
 void
 exp5 (std::vector<std::string> argv)
 {
-    TimeSeriesCollection db( argv[0].c_str(), 2, -1 ); // distribution is normal
-    db.normalize();
+  TimeSeriesCollection db( argv[0].c_str(), 2, -1 ); // distribution is normal
+  db.normalize();
 
-    GDUST gdust_montecarlo( db, Integrator::MonteCarlo );
-    GDUST gdust_simpson( db, Integrator::Simpson );
+  GDUST gdust_montecarlo( db, Integrator::MonteCarlo );
+  GDUST gdust_simpson( db, Integrator::Simpson );
 
-    for (var i = 0; i < db.sequences.size() - 1; i++) {
-      for (var j = 1; j < db.sequences.size(); j++) {
+  for (int i = 0; i < db.sequences.size() - 1; i++) {
+    for (int j = 1; j < db.sequences.size(); j++) {
       TimeSeries &ts1 = db.sequences[i];
       TimeSeries &ts2 = db.sequences[j];
 
@@ -349,6 +349,7 @@ exp5 (std::vector<std::string> argv)
       std::cout << "MonteCarlo: \t" << d_montecarlo << std::endl;
       std::cout << "Simpson: \t" << d_simpson << std::endl;
     }
+  }
 }
 
 
