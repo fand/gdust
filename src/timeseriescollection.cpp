@@ -5,7 +5,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
-#include <assert.h>
+#include <cassert>
 #include <algorithm>
 
 
@@ -63,7 +63,7 @@ TimeSeriesCollection::computeTopKthresholds (unsigned int K,
     topIdDists.resize( sequences.size() );
 
     std::cout << "resized" << std::endl;
-    
+
     Euclidean trueEuclidean( *this, true );
 
     for (unsigned int i = 0; i < sequences.size(); i++) {
@@ -86,15 +86,23 @@ TimeSeriesCollection::computeTopKthresholds (unsigned int K,
 void
 TimeSeriesCollection::normalize()
 {
-    for (int i=0; i<sequences.size(); i++) {
+    for (int i = 0; i < sequences.size(); i++) {
         sequences[i].normalize();
     }
 }
 
-
 void TimeSeriesCollection::printSeqs()
 {
-    for (int i=0; i<sequences.size(); i++) {
+    for (int i = 0; i < sequences.size(); i++) {
         sequences[i].printSeq();
     }
+}
+
+int TimeSeriesCollection::length_min()
+{
+    int l = this->sequences[0].length();
+    for (int i = 1; i < this->sequences.size(); i++) {
+        l = std::min(l, (int)this->sequences[i].length());
+    }
+    return l;
 }

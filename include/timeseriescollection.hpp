@@ -20,5 +20,6 @@ public:
 
     void normalize();
     void printSeqs();
-};
 
+    int length_min();
+};

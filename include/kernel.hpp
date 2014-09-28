@@ -22,6 +22,8 @@ __device__ float g_f3_multi (float z, float *x, float *y);
 __device__ float simpson_f1 (float left, float width, float *tuple);
 __device__ float simpson_f2 (float left, float width, float *tuple);
 __device__ float simpson_f3 (float left, float width, float *tuple);
+__device__ float simpson_f12_multi (float left, float width, float *x);
+__device__ float simpson_f3_multi (float left, float width, float *x, float *y);
 
 __global__ void g_distance_kernel (float *tsc_GPU, float *samples_GPU, float *dust_GPU);
 __device__ void g_dust_kernel (float *tuple, float *samples, float *answer_GPU);
@@ -34,5 +36,7 @@ template<unsigned int blockSize> __device__ void g_reduceBlock (float *sdata1,
 
 __global__ void g_match (float *ts_GPU, float *tsc_GPU, float *DUST_GPU, size_t ts_length, size_t ts_num,
                          float *samples_GPU);
+__global__ void g_match_simpson (float *ts_GPU, float *tsc_GPU, float *DUST_GPU, size_t ts_length, size_t ts_num,
+                                 int division);
 
 __global__ void g_f123_test(float *param, float *results);

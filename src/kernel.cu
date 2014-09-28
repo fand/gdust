@@ -225,6 +225,20 @@ simpson_f3 (float left, float width, float *tuple)
   float right = left + width;
   return (width / 6) * (g_f3(left, tuple) + g_f3(right, tuple) + g_f3(mid, tuple) * 4);
 }
+__device__ float
+simpson_f12_multi (float left, float width, float *x)
+{
+  float mid = left + width * 0.5;
+  float right = left + width;
+  return (width / 6) * (g_f12_multi(left, x) + g_f12_multi(right, x) + g_f12_multi(mid, x) * 4);
+}
+__device__ float
+simpson_f3_multi (float left, float width, float *x, float *y)
+{
+  float mid = left + width * 0.5;
+  float right = left + width;
+  return (width / 6) * (g_f3_multi(left, x, y) + g_f3_multi(right, x, y) + g_f3_multi(mid, x, y) * 4);
+}
 
 
 //
@@ -321,6 +335,7 @@ g_dust_simpson_kernel (float *tuple,
     __shared__ float sdata3[TPB];
 
     float width = RANGE_WIDTH / (float)division;
+
     // MAP PHASE
     // put (f1, f2, f3) into (o1, o2, o3) for all samples
     for (int i = threadIdx.x; i < division; i += blockDim.x) {
@@ -339,11 +354,11 @@ g_dust_simpson_kernel (float *tuple,
 
     if (threadIdx.x == 0) {
         float int1 = sdata1[0];
-        if (int1 < VERYSMALL) int1 = VERYSMALL;
         float int2 = sdata2[0];
-        if (int2 < VERYSMALL) int2 = VERYSMALL;
         float int3 = sdata3[0];
-        if (int3 < 0.0f) int3 = 0.0f;
+        if (int1 < VERYSMALL) int1 = VERYSMALL;
+        if (int2 < VERYSMALL) int2 = VERYSMALL;
+        if (int3 < 0.0f)      int3 = 0.0f;
 
         float dust = -log10(int3 / (int1 * int2));
 
@@ -499,6 +514,66 @@ g_match (float *ts_GPU,
             float int1 = sdata1[0] * r;
             float int2 = sdata2[0] * r;
             float int3 = sdata3[0] * r;
+            if (int1 < VERYSMALL) int1 = VERYSMALL;
+            if (int2 < VERYSMALL) int2 = VERYSMALL;
+            if (int3 < 0.0f)      int3 = 0.0f;
+
+            float dust = -log10(int3 / (int1 * int2));
+            if (dust < 0.0) { dust = 0.0f; }
+
+            dusts[i] = dust;
+        }
+    }
+}
+
+
+//!
+// With seq on global memory.
+//
+__global__ void
+g_match_simpson (float *ts_GPU,
+                 float *tsc_GPU,
+                 float *dust_GPU,
+                 size_t ts_length,
+                 size_t ts_num,
+                 int division)
+{
+    int time = blockIdx.x;
+
+    float o1 = 0.0f;
+    float o2 = 0.0f;
+    float o3 = 0.0f;
+    __shared__ float sdata1[TPB];
+    __shared__ float sdata2[TPB];
+    __shared__ float sdata3[TPB];
+
+    float *dusts = &dust_GPU[ts_num * time];
+    float *tsc = &tsc_GPU[ts_num * time * 3];  // TimeSeriesCollection for this block
+    float *x  = &ts_GPU[time * 3];             // TODO: compute f1 only once.
+
+    float width = RANGE_WIDTH / (float)division;
+
+    for (int i = 0; i < ts_num; i++) {
+        float *y = &tsc[i * 3];
+        o1 = o2 = o3 = 0.0f;
+        for (int j = threadIdx.x; j < division; j += blockDim.x) {
+            float window_left = width * i + RANGE_MIN;
+            o1 += simpson_f12_multi( window_left, width, x );
+            o2 += simpson_f12_multi( window_left, width, y );
+            o3 += simpson_f3_multi( window_left, width, x, y );
+        }
+
+        sdata1[threadIdx.x] = o1;
+        sdata2[threadIdx.x] = o2;
+        sdata3[threadIdx.x] = o3;
+        g_reduceBlock<TPB>(sdata1, sdata2, sdata3);
+
+        __syncthreads();
+
+        if (threadIdx.x == 0) {
+            float int1 = sdata1[0];
+            float int2 = sdata2[0];
+            float int3 = sdata3[0];
             if (int1 < VERYSMALL) int1 = VERYSMALL;
             if (int2 < VERYSMALL) int2 = VERYSMALL;
             if (int3 < 0.0f)      int3 = 0.0f;
