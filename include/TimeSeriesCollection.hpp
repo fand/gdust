@@ -1,6 +1,6 @@
 #pragma once
 
-#include "timeseries.hpp"
+#include "TimeSeries.hpp"
 #include <vector>
 
 typedef std::pair< int, float > PairIdDistance;

@@ -1,4 +1,4 @@
-#include "randomvariable.hpp"
+#include "RandomVariable.hpp"
 
 RandomVariable::RandomVariable (int distribution, float groundtruth, float observation, float stddev)
 {

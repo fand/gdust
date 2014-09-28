@@ -2,8 +2,8 @@
 // Actual computation is done by Integrator,
 // because it's difficult to separate from GPU management.
 
-#include "gdust.hpp"
-#include "integrator.hpp"
+#include "GDUST.hpp"
+#include "Integrator.hpp"
 #include "common.hpp"
 
 #include <math.h>

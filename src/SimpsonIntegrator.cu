@@ -1,9 +1,9 @@
-#include "integrator.hpp"
+#include "Integrator.hpp"
 #include <iostream>
 #include <fstream>
 #include <math.h>
 #include <curand.h>
-#include "randomvariable.hpp"
+#include "RandomVariable.hpp"
 #include "kernel.hpp"
 #include "config.hpp"
 #include "cutil.hpp"

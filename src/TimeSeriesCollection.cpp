@@ -1,5 +1,5 @@
-#include "timeseriescollection.hpp"
-#include "euclidean.hpp"
+#include "TimeSeriesCollection.hpp"
+#include "Euclidean.hpp"
 #include "common.hpp"
 
 #include <iostream>

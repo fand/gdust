@@ -1,8 +1,8 @@
 #pragma once
 
-#include "timeseries.hpp"
-#include "timeseriescollection.hpp"
-#include "randomvariable.hpp"
+#include "TimeSeries.hpp"
+#include "TimeSeriesCollection.hpp"
+#include "RandomVariable.hpp"
 
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_monte.h>

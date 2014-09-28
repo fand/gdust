@@ -1,5 +1,5 @@
 #include "ckernel.hpp"
-#include "randomvariable.hpp"
+#include "RandomVariable.hpp"
 #include "config.hpp"
 #include <cmath>
 #include <cstdlib>

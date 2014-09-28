@@ -1,5 +1,5 @@
 #include "kernel.hpp"
-#include "randomvariable.hpp"
+#include "RandomVariable.hpp"
 #include "config.hpp"
 #include <stdio.h>
 

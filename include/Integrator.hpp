@@ -1,7 +1,7 @@
 #pragma once
 #include <curand.h>
-#include "timeseries.hpp"
-#include "timeseriescollection.hpp"
+#include "TimeSeries.hpp"
+#include "TimeSeriesCollection.hpp"
 
 ///
 // Integrators for dust

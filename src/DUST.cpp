@@ -1,4 +1,4 @@
-#include "dust.hpp"
+#include "DUST.hpp"
 #include "common.hpp"
 #include "config.hpp"
 

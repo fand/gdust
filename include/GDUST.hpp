@@ -2,10 +2,10 @@
 
 //#undef _GLIBCXX_USE_C99_MATH
 
-#include "timeseries.hpp"
-#include "timeseriescollection.hpp"
-#include "randomvariable.hpp"
-#include "integrator.hpp"
+#include "TimeSeries.hpp"
+#include "TimeSeriesCollection.hpp"
+#include "RandomVariable.hpp"
+#include "Integrator.hpp"
 
 #include <map>
 

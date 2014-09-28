@@ -1,4 +1,4 @@
-#include "euclidean.hpp"
+#include "Euclidean.hpp"
 #include "common.hpp"
 
 #include <stdlib.h>
@@ -18,7 +18,7 @@ Euclidean::Euclidean( TimeSeriesCollection &collection, bool exact )
 std::vector< int > Euclidean::rangeQuery( TimeSeries &ts, float threshold )
 {
     std::vector< int > ids;
-    
+
     for( unsigned int i = 0; i < collection.sequences.size(); i++ )
     {
         if( distance( ts, collection.sequences[i] ) <= threshold )
@@ -45,7 +45,7 @@ float Euclidean::distance( TimeSeries &ts1, TimeSeries &ts2, int n )
         n = ts1.length();
     }
 
-    
+
     if(exact)
     {
         for( int i = 0; i < n; i++ )
@@ -74,7 +74,7 @@ float Euclidean::getHeuristicThreshold( float abovePercentual )
     {
         histogram[i] = 0;
     }
-    
+
     float min = -1, max = -1;
 
     for( unsigned int i = 0; i < collection.sequences.size(); i++)
@@ -197,7 +197,7 @@ void Euclidean::calcCost( TimeSeries &ts1, TimeSeries &ts2, double *table_d, dou
 void Euclidean::calcGamma( double *table_d, double *table_g, int len1, int len2 )
 {
     table_g[0] = table_d[0];
-    
+
     for ( int i = 1; i < len1; i++ )
     {
         table_g[ i*len2 ] = table_d[ i*len2 ] + table_g[ (i-1) * len2 ];
@@ -207,7 +207,7 @@ void Euclidean::calcGamma( double *table_d, double *table_g, int len1, int len2 
     {
         table_g[i] = table_d[i] + table_g[i-1];
     }
-    
+
     for ( int i = 1; i< len1; i++ )
     {
         for( int j = 1; j < len2; j++ )
@@ -228,14 +228,14 @@ void Euclidean::calcGamma( double *table_d, double *table_g, int len1, int len2 
 double Euclidean::calcSum( double *table_d, double *table_g, int len1, int len2 )
 {
     double sum = 0.0;
-    
+
     int i = len1 - 1;
     int j = len2 - 1;
-    
+
     while( i > 0 || j > 0 ){
-        
+
         sum += table_g[ i*len2 + j ];
-            
+
         if( i == 0 ){
             j--;
         }else if( j == 0 ){
@@ -259,5 +259,3 @@ double Euclidean::calcSum( double *table_d, double *table_g, int len1, int len2 
 
     return sum;
 }
-
-

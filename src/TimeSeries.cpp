@@ -1,5 +1,5 @@
-#include "timeseries.hpp"
-#include "randomvariable.hpp"
+#include "TimeSeries.hpp"
+#include "RandomVariable.hpp"
 
 #include <iostream>
 #include <sstream>
@@ -49,7 +49,7 @@ TimeSeries::readString (std::string &s, int distribution)
         line >> groundtruth;
         line >> observation;
         line >> stddev;
-        
+
         this->sequence.push_back( RandomVariable( distribution, groundtruth, observation, stddev ) );
     }
 }
@@ -105,7 +105,7 @@ TimeSeries::normalize()
     float min = this->sequence[0].observation;
     float max = this->sequence[0].observation;
     float tmp = 0.0;
-    
+
     for (unsigned int i = 1; i < this->sequence.size(); i++) {
         tmp = this->sequence[i].observation;
         if (min > tmp) min = tmp;
@@ -113,7 +113,7 @@ TimeSeries::normalize()
     }
 
     if (min == max) return;
-    
+
     float ratio = 1.0f / abs(max-min);
 
     for (unsigned int i = 0; i < this->sequence.size(); i++) {

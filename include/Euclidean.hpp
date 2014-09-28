@@ -1,7 +1,7 @@
 #pragma once
 
-#include "timeseries.hpp"
-#include "timeseriescollection.hpp"
+#include "TimeSeries.hpp"
+#include "TimeSeriesCollection.hpp"
 #include <vector>
 
 class Euclidean
@@ -11,7 +11,7 @@ public:
     std::vector< int > rangeQuery( TimeSeries &ts, float threshold);
     float distance(TimeSeries &ts1, TimeSeries &ts2, int n = -1);
     double dtw(TimeSeries &ts1, TimeSeries &ts2);
-    
+
     int largestDistanceId;
     TimeSeriesCollection collection;
 
