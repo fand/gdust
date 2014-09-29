@@ -1,35 +1,28 @@
 #pragma once
 
-//#undef _GLIBCXX_USE_C99_MATH
-
+#include <map>
 #include "TimeSeries.hpp"
 #include "TimeSeriesCollection.hpp"
 #include "RandomVariable.hpp"
 #include "Integrator.hpp"
 
-#include <map>
 
-
-
-class GDUST
-{
+class GDUST {
 public:
-    ~GDUST();
-    GDUST(TimeSeriesCollection &collection, const Integrator::Method method = Integrator::MonteCarlo);
+GDUST(const TimeSeriesCollection &collection, const Integrator::Method method = Integrator::MonteCarlo);
+~GDUST();
 
-    void init();
+void init();
 
-    float  distance (TimeSeries &ts1, TimeSeries &ts2, int n = -1);
-    double dtw (TimeSeries &ts1, TimeSeries &ts2);
+float distance(const TimeSeries &ts1, const TimeSeries &ts2, const int n = -1);
+double dtw (const TimeSeries &ts1, const TimeSeries &ts2);
 
-    void match_naive (TimeSeries &ts);
-    void match (TimeSeries &ts);
+void match_naive (const TimeSeries &ts);
+void match (const TimeSeries &ts);
 
-    TimeSeriesCollection collection;
-
-    bool  lookupTablesAvailable;
-
+TimeSeriesCollection collection;
+bool  lookupTablesAvailable;
 
 private:
-    Integrator *integ;
+Integrator *integ;
 };

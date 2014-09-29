@@ -27,23 +27,23 @@
 class DUST
 {
 public:
+    DUST(const TimeSeriesCollection &collection, const char *lookUpTablesPath = NULL);
     ~DUST();
-    DUST(TimeSeriesCollection &collection, const char *lookUpTablesPath = NULL);
 
     void init();
 
     TimeSeriesCollection collection;
 
-    double integrate (double (*f)(double * x_array, size_t dim, void * params), void *params);
+    double integrate (double (*f)(double *x_array, size_t dim, void *params), void *params);
 
-    double dust (RandomVariable &x, RandomVariable &y);
-    double phi  (RandomVariable &x, RandomVariable &y);
+    double dust (const RandomVariable &x, const RandomVariable &y);
+    double phi (const RandomVariable &x, const RandomVariable &y);
 
-    double distance (TimeSeries &ts1, TimeSeries &ts2, int n = -1);
-    double c_distance (TimeSeries &ts1, TimeSeries &ts2, int n);
-    double dtw      (TimeSeries &ts1, TimeSeries &ts2);
+    double distance (const TimeSeries &ts1, const TimeSeries &ts2, int n = -1);
+    double c_distance (const TimeSeries &ts1, const TimeSeries &ts2, int n);
+    double dtw (const TimeSeries &ts1, const TimeSeries &ts2);
 
-    void match (TimeSeries &ts, int n = -1);
+    void match (const TimeSeries &ts, int n = -1);
 
     std::vector<int> rangeQuery (TimeSeries ts, double threshold);
 
