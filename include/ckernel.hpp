@@ -10,11 +10,11 @@
 
 #define PI_DOUBLE 3.14159265358979323846264338327950288
 
-double c_pdf_uniform(double lower, double upper, double x);
-double c_pdf_normal(double mean, double sd, double x);
-double c_myPDF(int distribution, double mean, double stddev, double v);
-double c_f1(double v, double *xy);
-double c_f2(double v, double *xy);
-double c_f3(double z, double *xy);
-double c_f4(double k, double *xy);
-double c_dust_kernel(double *xy, double *samples, int time);
+float c_pdf_uniform(float lower, float upper, float x);
+float c_pdf_normal(float mean, float sd, float x);
+float c_myPDF(int distribution, float mean, float stddev, float v);
+float c_f1(float v, float *xy);
+float c_f2(float v, float *xy);
+float c_f3(float z, float *xy);
+float c_f4(float k, float *xy);
+float c_dust_kernel(float *xy, float *samples, int time);

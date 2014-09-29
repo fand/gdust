@@ -1,4 +1,5 @@
 #include "ckernel.hpp"
+#include "dust_inner.hpp"
 #include "RandomVariable.hpp"
 #include "config.hpp"
 #include <cmath>
@@ -11,8 +12,8 @@
 // PDF functions
 // __________________
 
-inline double
-c_pdf_uniform(double lower, double upper, double x) {
+inline float
+c_pdf_uniform(float lower, float upper, float x) {
   if ((x < lower) || (x > upper)) {
     return 0.0;
   }
@@ -22,31 +23,31 @@ c_pdf_uniform(double lower, double upper, double x) {
   return 1.0 / (upper - lower);
 }
 
-inline double
-c_pdf_normal(double mean, double sd, double x) {
+inline float
+c_pdf_normal(float mean, float sd, float x) {
   if (isinf(x) || sd <= 0 || isinf(sd) || isinf(mean)) {
     return 0.0;
   }
 
-  double result = 0.0;
+  float result = 0.0;
 
-  double exponent = x - mean;
+  float exponent = x - mean;
   exponent *= -exponent;
   exponent /= (2 * sd * sd);
 
   result = exp(exponent);
-  result /= sd * sqrt(2 * PI_DOUBLE);
+  result /= sd * sqrt(2 * PI_FLOAT);
 
   return result;
 }
 
-inline double
-c_myPDF(int distribution, double mean, double stddev, double v) {
-  double ret = -1.0f;
+inline float
+c_myPDF(int distribution, float mean, float stddev, float v) {
+  float ret = -1.0f;
   if (stddev == 0.0f) stddev = 0.2f;
 
   if (distribution == RANDVAR_UNIFORM) {
-    double b = SQRT3 * stddev;
+    float b = SQRT3 * stddev;
     ret = c_pdf_uniform(-b, b, v);
   } else if (distribution == RANDVAR_NORMAL) {
     ret = c_pdf_normal(0, 1, v / stddev);
@@ -65,14 +66,14 @@ c_myPDF(int distribution, double mean, double stddev, double v) {
 //
 // @param {float}   v  - Random value
 // @param {float[]} xy - An array containing x & y
-inline double
-c_f1(double v, double *xy) {
-  double p1 = c_myPDF(xy[ TUPLE_X_DISTRIBUTION ],     // distribution
+inline float
+c_f1(float v, float *xy) {
+  float p1 = c_myPDF(xy[ TUPLE_X_DISTRIBUTION ],     // distribution
                       0.0,                            // mean
                       xy[ TUPLE_X_STDDEV ],           // stddev
                       xy[ TUPLE_X_OBSERVATION ]-v);   // target
 
-  double p2 = c_pdf_uniform(-RANGE_VALUE, RANGE_VALUE, v);
+  float p2 = c_pdf_uniform(-RANGE_VALUE, RANGE_VALUE, v);
 
   return p1 * p2;
 }
@@ -81,14 +82,14 @@ c_f1(double v, double *xy) {
 // Calculate p(y|r(y)=v)p(r(y)=v).
 // Almost same as c_f1.
 //
-inline double
-c_f2(double v, double *xy) {
-  double p1 = c_myPDF(xy[ TUPLE_Y_DISTRIBUTION ],       // distribution
+inline float
+c_f2(float v, float *xy) {
+  float p1 = c_myPDF(xy[ TUPLE_Y_DISTRIBUTION ],       // distribution
                       0.0,                              // mean
                       xy[ TUPLE_Y_STDDEV ],             // stddev
                       xy[ TUPLE_Y_OBSERVATION ] - v);   // target
 
-  double p2 = c_pdf_uniform(-RANGE_VALUE, RANGE_VALUE, v);
+  float p2 = c_pdf_uniform(-RANGE_VALUE, RANGE_VALUE, v);
 
   return p1 * p2;
 }
@@ -99,20 +100,20 @@ c_f2(double v, double *xy) {
 // @param {float}   z  - Random value
 // @param {float[]} xy - An array containing x & y
 //
-inline double
-c_f3(double z, double *xy) {
+inline float
+c_f3(float z, float *xy) {
   int    x_dist   = static_cast<int>(xy[ TUPLE_X_DISTRIBUTION ]);
-  double x        = xy[ TUPLE_X_OBSERVATION ] - 0.1;
-  double x_stddev = xy[ TUPLE_X_STDDEV ];
+  float x        = xy[ TUPLE_X_OBSERVATION ] - 0.1;
+  float x_stddev = xy[ TUPLE_X_STDDEV ];
   int    y_dist   = static_cast<int>(xy[ TUPLE_Y_DISTRIBUTION ]);
-  double y        = xy[ TUPLE_Y_OBSERVATION ] + 0.1;
-  double y_stddev = xy[ TUPLE_Y_STDDEV ];
+  float y        = xy[ TUPLE_Y_OBSERVATION ] + 0.1;
+  float y_stddev = xy[ TUPLE_Y_STDDEV ];
 
-  double p1, p2;
+  float p1, p2;
 
   if (x_dist == RANDVAR_UNIFORM) {
-    double x_adjust = 0;
-    double y_adjust = 0;
+    float x_adjust = 0;
+    float y_adjust = 0;
 
     if (abs(x-z) > x_stddev * SQRT3) {
       x_adjust = c_myPDF(x_dist, 0, x_stddev, 0) *
@@ -124,8 +125,8 @@ c_f3(double z, double *xy) {
         (1 + erf(-(abs(y-z) - y_stddev * SQRT3)));
     }
 
-    double pdf_x = c_myPDF(x_dist, 0.0, x_stddev, x-z) + x_adjust;
-    double pdf_y = c_myPDF(y_dist, 0.0, y_stddev, y-z) + y_adjust;
+    float pdf_x = c_myPDF(x_dist, 0.0, x_stddev, x-z) + x_adjust;
+    float pdf_y = c_myPDF(y_dist, 0.0, y_stddev, y-z) + y_adjust;
 
     p1 = pdf_x * c_pdf_uniform(-RANGE_VALUE, RANGE_VALUE, z);
     p2 = pdf_y * c_pdf_uniform(-RANGE_VALUE, RANGE_VALUE, z);
@@ -140,8 +141,8 @@ c_f3(double z, double *xy) {
   return p1 * p2;
 }
 
-double
-c_f4(double k, double *xy) {
+float
+c_f4(float k, float *xy) {
   return 1.0;
 }
 
@@ -150,29 +151,29 @@ c_f4(double k, double *xy) {
 // Functions for dust / DUST
 // ______________________________
 
-double
-c_dust_kernel(double *xy, double *samples, int time) {
-  double o1 = 0.0;
-  double o2 = 0.0;
-  double o3 = 0.0;
+float
+c_dust_kernel(float *xy, float *samples, int time) {
+  float o1 = 0.0;
+  float o2 = 0.0;
+  float o3 = 0.0;
 
   int offset = time * 3 * INTEGRATION_SAMPLES;
-  double *local_samples = samples + offset;
+  float *local_samples = samples + offset;
   for (int i = 0; i < INTEGRATION_SAMPLES; ++i) {
-    o1 += c_f1(local_samples[i * 3    ], xy);
-    o2 += c_f2(local_samples[i * 3 + 1], xy);
-    o3 += c_f3(local_samples[i * 3 + 2], xy);
+    o1 += (float)f1(local_samples[i * 3    ], xy);
+    o2 += (float)f2(local_samples[i * 3 + 1], xy);
+    o3 += (float)f3(local_samples[i * 3 + 2], xy);
   }
 
-  double r = static_cast<double>(RANGE_WIDTH) / INTEGRATION_SAMPLES;
-  double int1 = o1 * r;
-  double int2 = o2 * r;
-  double int3 = o3 * r;
+  float r = static_cast<float>(RANGE_WIDTH) / INTEGRATION_SAMPLES;
+  float int1 = o1 * r;
+  float int2 = o2 * r;
+  float int3 = o3 * r;
   if (int1 < VERYSMALL) int1 = VERYSMALL;
   if (int2 < VERYSMALL) int2 = VERYSMALL;
   if (int3 < 0.0) int3 = 0.0;
 
-  double d = -log10(int3 / (int1 * int2));
+  float d = -log10(int3 / (int1 * int2));
 
   if (d < 0.0) { d = 0.0; }
 

@@ -42,6 +42,7 @@ DUST::c_distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) {
 
   const int num_rands = n * 3 * INTEGRATION_SAMPLES;
   __attribute__((aligned(64))) double *rands = new double[num_rands];
+  float *frands = new float[num_rands];
 
 #pragma omp parallel
   {
@@ -51,7 +52,7 @@ DUST::c_distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) {
 #pragma omp for schedule(static)
     for (int i = 0; i < num_rands; ++i) {
       drand48_r(&buffer, &rands[i]);
-      rands[i] = rands[i] * RANGE_WIDTH + RANGE_MIN;
+      frands[i] = static_cast<float>(rands[i] * RANGE_WIDTH + RANGE_MIN);
     }
   }
 
@@ -60,16 +61,17 @@ DUST::c_distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) {
     RandomVariable x = ts1.at(i);
     RandomVariable y = ts2.at(i);
 
-    double params[] = {
-      x.distribution, x.observation, x.stddev,
-      y.distribution, y.observation, y.stddev
+    float params[] = {
+      (float)x.distribution, (float)x.observation, (float)x.stddev,
+      (float)y.distribution, (float)y.observation, (float)y.stddev
     };
 
-    double d = c_dust_kernel(params, rands, i);
+    float d = c_dust_kernel(params, frands, i);
     dist += d;
   }
 
   delete[] rands;
+  delete[] frands;
 
   return sqrt(dist);
 }

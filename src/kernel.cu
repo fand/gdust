@@ -1,4 +1,5 @@
 #include "kernel.hpp"
+#include "dust_inner.hpp"
 #include "RandomVariable.hpp"
 #include "config.hpp"
 #include <stdio.h>
@@ -8,7 +9,7 @@
 // PDF functions
 // __________________
 
-__device__ float
+__device__ inline float
 g_pdf_uniform(float lower, float upper, float x) {
   if ((x < lower) || (x > upper)) {
     return 0.0f;
@@ -19,7 +20,7 @@ g_pdf_uniform(float lower, float upper, float x) {
   return 1.0f / (upper - lower);
 }
 
-__device__ float
+__device__ inline float
 g_pdf_normal(float mean, float sd, float x) {
   if (isinf(x) || sd <= 0 || isinf(sd) || isinf(mean)) {
     return 0.0f;
@@ -37,7 +38,7 @@ g_pdf_normal(float mean, float sd, float x) {
   return result;
 }
 
-__device__ float
+__device__ inline float
 g_myPDF(int distribution, float mean, float stddev, float v) {
   float ret = -1.0f;
   if (stddev == 0.0f) stddev = 0.2f;
@@ -62,7 +63,7 @@ g_myPDF(int distribution, float mean, float stddev, float v) {
 //
 // @param {float}   v  - Random value
 // @param {float[]} xy - An array containing x & y
-__device__ float
+__device__ inline float
 g_f1(float v, float *xy) {
   float p1 = g_myPDF(xy[ TUPLE_X_DISTRIBUTION ],    // distribution
                      0.0f,                          // mean
@@ -78,7 +79,7 @@ g_f1(float v, float *xy) {
 // Calculate p(y|r(y)=v)p(r(y)=v).
 // Almost same as g_f1.
 //
-__device__ float
+__device__ inline float
 g_f2(float v, float *xy) {
   float p1 = g_myPDF(xy[ TUPLE_Y_DISTRIBUTION ],      // distribution
                      0.0f,                            // mean
@@ -96,7 +97,7 @@ g_f2(float v, float *xy) {
 // @param {float}   z  - Random value
 // @param {float[]} xy - An array containing x & y
 //
-__device__ float
+__device__ inline float
 g_f3(float z, float *xy) {
   int   x_dist   = static_cast<int>(xy[TUPLE_X_DISTRIBUTION]);
   float x        = xy[TUPLE_X_OBSERVATION] - 0.1f;
@@ -137,13 +138,13 @@ g_f3(float z, float *xy) {
   return p1 * p2;
 }
 
-__device__ float
+__device__ inline float
 g_f4(float k, float *xy) {
   return 1.0f;
 }
 
 // calculate p(y|r(y)=v)p(r(y)=v)
-__device__ float
+__device__ inline float
 g_f12_multi(float v, float *x) {
   float p1 = g_myPDF(x[0], 0.0f, x[2], x[1] - v);
   float p2 = g_pdf_uniform(-RANGE_VALUE, RANGE_VALUE, v);
@@ -151,7 +152,7 @@ g_f12_multi(float v, float *x) {
 }
 
 // p(r(x)=z|x) * p(r(y)=z|y)
-__device__ float
+__device__ inline float
 g_f3_multi(float z, float *x_, float *y_) {
   int   x_dist   = static_cast<int>(x_[0]);
   float x        = x_[1] - 0.1f;
@@ -192,7 +193,7 @@ g_f3_multi(float z, float *x_, float *y_) {
   return p1 * p2;
 }
 
-__device__ float
+__device__ inline float
 simpson_f1(float left, float width, float *tuple) {
   float mid = left + width * 0.5;
   float right = left + width;
@@ -200,7 +201,7 @@ simpson_f1(float left, float width, float *tuple) {
                         g_f1(right, tuple) +
                         g_f1(mid, tuple) * 4);
 }
-__device__ float
+__device__ inline float
 simpson_f2(float left, float width, float *tuple) {
   float mid = left + width * 0.5;
   float right = left + width;
@@ -208,7 +209,7 @@ simpson_f2(float left, float width, float *tuple) {
                         g_f2(right, tuple) +
                         g_f2(mid, tuple) * 4);
 }
-__device__ float
+__device__ inline float
 simpson_f3(float left, float width, float *tuple) {
   float mid = left + width * 0.5;
   float right = left + width;
@@ -216,7 +217,7 @@ simpson_f3(float left, float width, float *tuple) {
                         g_f3(right, tuple) +
                         g_f3(mid, tuple) * 4);
 }
-__device__ float
+__device__ inline float
 simpson_f12_multi(float left, float width, float *x) {
   float mid = left + width * 0.5;
   float right = left + width;
@@ -224,7 +225,7 @@ simpson_f12_multi(float left, float width, float *x) {
                         g_f12_multi(right, x) +
                         g_f12_multi(mid, x) * 4);
 }
-__device__ float
+__device__ inline float
 simpson_f3_multi(float left, float width, float *x, float *y) {
   float mid = left + width * 0.5;
   float right = left + width;
@@ -271,9 +272,12 @@ g_dust_kernel(float *tuple,
     sample1 = samples[i + offset1] * RANGE_WIDTH + RANGE_MIN;
     sample2 = samples[i + offset2] * RANGE_WIDTH + RANGE_MIN;
     sample3 = samples[i + offset3] * RANGE_WIDTH + RANGE_MIN;
-    o1 += g_f1(sample1, tuple);
-    o2 += g_f2(sample2, tuple);
-    o3 += g_f3(sample3, tuple);
+    // o1 += g_f1(sample1, tuple);
+    // o2 += g_f2(sample2, tuple);
+    // o3 += g_f3(sample3, tuple);
+    o1 += f1(sample1, tuple);
+    o2 += f2(sample2, tuple);
+    o3 += f3(sample3, tuple);
   }
 
   // REDUCE PHASE
@@ -482,9 +486,12 @@ g_match(float *ts_GPU,
       sample2 = samples2[i * ts_num + j] * RANGE_WIDTH + RANGE_MIN;
       sample3 = samples3[i * ts_num + j] * RANGE_WIDTH + RANGE_MIN;
 
-      o1 += g_f12_multi(sample1, x);
-      o2 += g_f12_multi(sample2, y);
-      o3 += g_f3_multi(sample3, x, y);
+      // o1 += g_f12_multi(sample1, x);
+      // o2 += g_f12_multi(sample2, y);
+      // o3 += g_f3_multi(sample3, x, y);
+      o1 += f12_multi(sample1, x);
+      o2 += f12_multi(sample2, y);
+      o3 += f3_multi(sample3, x, y);
     }
 
     sdata1[threadIdx.x] = o1;
