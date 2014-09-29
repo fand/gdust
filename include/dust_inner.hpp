@@ -1,6 +1,14 @@
 #include "config.hpp"
 #include "RandomVariable.hpp"
 
+#define TUPLE_SIZE 6
+#define TUPLE_X_DISTRIBUTION 0
+#define TUPLE_X_OBSERVATION  1
+#define TUPLE_X_STDDEV       2
+#define TUPLE_Y_DISTRIBUTION 3
+#define TUPLE_Y_OBSERVATION  4
+#define TUPLE_Y_STDDEV       5
+
 __host__ __device__ float pdf_uniform(float lower, float upper, float x);
 __host__ __device__ float pdf_normal(float mean, float sd, float x);
 __host__ __device__ float myPDF(int distribution, float mean, float stddev, float v);
