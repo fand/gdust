@@ -4,10 +4,13 @@
 
 
 Integrator* Integrator::create(Integrator::Method method) {
-  return
-    (method == Integrator::MonteCarlo) ? new MonteCarloIntegrator():
-    (method == Integrator::Simpson)? return new SimpsonIntegrator() :
-    new MonteCarloIntegrator();
+  if (method == Integrator::MonteCarlo) {
+    return new MonteCarloIntegrator();
+  }
+  if (method == Integrator::Simpson) {
+    return new SimpsonIntegrator();
+  }
+  return new MonteCarloIntegrator();
 }
 
 void Integrator::prepare_match(const TimeSeries &ts, const TimeSeriesCollection &tsc) {

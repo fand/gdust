@@ -6,7 +6,8 @@
 #include <sys/stat.h>
 #include <cstdlib>
 #include <cassert>
-#include <errno.h>
+#include <cerrno>
+#include <cstring>
 #include <boost/random.hpp>
 #include <boost/random/normal_distribution.hpp>
 #include "common.hpp"
@@ -15,7 +16,7 @@
 DataSet::DataSet() {}
 
 void
-DataSet::randomWalks(int64 N, int64 length) {
+DataSet::randomWalks(int64_t N, int64_t length) {
   boost::mt19937 rng;
   boost::uniform_real<> ur(0.0, 1.0);
   boost::variate_generator< boost::mt19937&, boost::uniform_real<> > drawSample(rng, ur);
@@ -58,7 +59,7 @@ DataSet::readFile(const char *src) {
       }
     }
 
-    normalize(originalTimeSeries[i]);
+    normalize(&originalTimeSeries[i]);
 
     std::cerr << "TimeSeries " << i+1
               << " has length " << originalTimeSeries[i].size() << std::endl;
@@ -72,24 +73,24 @@ DataSet::readFile(const char *src) {
   fin.close();
 }
 
-
-// const ok???
+// Normalize to fit [-1, 1].
 void
-DataSet::normalize(const std::vector< float > &timeSeries) {
-  float average = 0;
-  float maxdev = 0;
+DataSet::normalize(std::vector< float > *timeSeries) {
+  float average = 0.0f;
+  float maxdev = 1.0f;
 
-  for (unsigned int i = 0; i < timeSeries.size(); i++) {
-    average += timeSeries[i];
+  // Get the average of observarion.
+  for (unsigned int i = 0; i < timeSeries->size(); i++) {
+    average += timeSeries->at(i);
   }
-  average /= static_cast<float>(timeSeries.size());
+  average /= static_cast<float>(timeSeries->size());
 
-  for (unsigned int i = 0; i < timeSeries.size(); i++) {
-    maxdev = MAX(maxdev, ABS(average - timeSeries[i]));
+  for (unsigned int i = 0; i < timeSeries->size(); i++) {
+    maxdev = MAX(maxdev, ABS(average - timeSeries->at(i)));
   }
 
-  for (unsigned int i = 0; i < timeSeries.size(); i++) {
-    timeSeries[i] = (timeSeries[i] - average) / maxdev;
+  for (unsigned int i = 0; i < timeSeries->size(); i++) {
+    (*timeSeries)[i] = (timeSeries->at(i) - average) / maxdev;
   }
 }
 
@@ -100,7 +101,7 @@ DataSet::writeMultiSamplesDir(const char *dst) {
 
   for (int i = 0; i < this->N; i++) {
     for (int j = 0; j < SAMPLES_MAX; j++) {
-      normalize(perturbatedTimeSeries[i][j]);
+      normalize(&perturbatedTimeSeries[i][j]);
     }
   }
 

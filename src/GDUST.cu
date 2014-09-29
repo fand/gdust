@@ -15,7 +15,7 @@ clean_probability(float p) {
 }
 
 GDUST::GDUST(const TimeSeriesCollection &collection, const Integrator::Method method) {
-  collection = collection;
+  this->collection = &collection;
   integrator = Integrator::create(method);
 }
 
@@ -30,10 +30,10 @@ GDUST::distance(const TimeSeries &ts1, const TimeSeries &ts2, const int n) {
 
 void
 GDUST::match_naive(const TimeSeries &ts) {
-  this->integrator->match_naive(ts, this->collection);
+  this->integrator->match_naive(ts, *this->collection);
 }
 
 void
 GDUST::match(const TimeSeries &ts) {
-  integrator->match(ts, this->collection);
+  integrator->match(ts, *this->collection);
 }

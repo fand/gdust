@@ -18,6 +18,6 @@ class GDUST {
   void match(const TimeSeries &ts);
 
  private:
-  TimeSeriesCollection collection;
+  const TimeSeriesCollection *collection;
   Integrator *integrator;
 };

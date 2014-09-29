@@ -4,6 +4,6 @@ typedef struct {
   char *rfileQuery2;
   char *wfile;
   bool synthetic;
-  int64 syntheticLength;
-  int64 syntheticN;
+  int64_t syntheticLength;
+  int64_t syntheticN;
 } OPT;

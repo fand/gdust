@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <omp.hpp>
+#include <omp.h>
 #include "common.hpp"
 #include "config.hpp"
 #include "ckernel.hpp"
@@ -35,7 +35,7 @@ double
 DUST::c_distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) {
   double dist = 0.0;
 
-  const int64 seeds[12] = {
+  const int64_t seeds[12] = {
     3467, 10267, 16651, 19441, 23497, 27361,
     35317, 76801, 199933, 919393, 939193, 999331,
   };
@@ -277,9 +277,9 @@ DUST::dtw(const TimeSeries &ts1, const TimeSeries &ts2) {
   double *table_d = new double[len1 * len2];
   double *table_g = new double[len1 * len2];
 
-  calcCost(ts1, ts2, table_d, table_g, len1, len2n);
+  calcCost(ts1, ts2, table_d, table_g, len1, len2);
   calcGamma(table_d, table_g, len1, len2);
-  double dist = calcSum(table_d, table_g, len1, len2n);
+  double dist = calcSum(table_d, table_g, len1, len2);
 
   delete[] table_d;
   delete[] table_g;

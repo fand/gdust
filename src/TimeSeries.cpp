@@ -42,7 +42,7 @@ TimeSeries::readString(const std::string &s, int distribution) {
     line >> observation;
     line >> stddev;
 
-    RandomVariable r = new RandomVariable(distribution, groundtruth, observation, stddev);
+    RandomVariable r(distribution, groundtruth, observation, stddev);
     this->sequence.push_back(r);
   }
 }
@@ -62,17 +62,29 @@ TimeSeries::readFile(const char *path, int distribution) {
   fin.close();
 }
 
-RandomVariable TimeSeries::at(int index) {
+RandomVariable TimeSeries::operator [](int index) const {
   return this->sequence[index];
 }
 
+RandomVariable TimeSeries::at(int index) const {
+  return this->sequence[index];
+}
+
+float TimeSeries::setValueAt(int index, float value) {
+  return this->sequence[index].observation = value;
+}
+
+RandomVariable TimeSeries::setValueAt(int index, RandomVariable value) {
+  return this->sequence[index] = value;
+}
+
 unsigned int
-TimeSeries::length() {
+TimeSeries::length() const {
   return this->sequence.size();
 }
 
 int
-TimeSeries::getId() {
+TimeSeries::getId() const {
   return this->id;
 }
 
@@ -105,7 +117,7 @@ TimeSeries::normalize() {
 }
 
 void
-TimeSeries::printSeq() {
+TimeSeries::printSeq() const {
   for (unsigned int i = 1; i < this->sequence.size(); i++) {
     std::cout << this->sequence[i].observation << std::endl;
   }

@@ -16,10 +16,10 @@
 class DataSet {
  public:
   DataSet();
-  void normalize(const std::vector< float > &timeSeries);
+  void normalize(std::vector< float > *timeSeries);
   void perturbateNothing();
   void perturbateNormal(float mu, float sigma);
-  void randomWalks(int64 n, int64 length);
+  void randomWalks(int64_t n, int64_t length);
   void readFile(const char *src);
   void writeMultiSamplesDir(const char *dst);
 

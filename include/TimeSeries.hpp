@@ -13,13 +13,16 @@ class TimeSeries {
   TimeSeries(const std::string &s, int distribution);
   void readFile(const char *path, int distribution);
   void readString(const std::string &s, int distribution);
-  RandomVariable at(int index);
+  RandomVariable operator [] (int index) const;
+  RandomVariable at(int index) const;
+  float setValueAt(int index, float value);
+  RandomVariable setValueAt(int index, RandomVariable value);
 
-  unsigned int length();
-  int getId();
+  unsigned int length() const;
+  int getId() const;
   void setId(int newId);
   void normalize();
-  void printSeq();
+  void printSeq() const;
 
  private:
   std::vector< RandomVariable > sequence;

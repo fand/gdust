@@ -88,7 +88,7 @@ float Euclidean::getHeuristicThreshold(float abovePercentual) {
     }
   }
 
-  unsigned__int64 counter = 0;
+  int64_t counter = 0;
   int bucket_id = 0;
   for (bucket_id = 0; bucket_id < 1000; bucket_id++) {
     counter += histogram[bucket_id];

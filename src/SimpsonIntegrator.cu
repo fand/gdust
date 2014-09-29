@@ -63,56 +63,56 @@ SimpsonIntegrator::distance(const TimeSeries &ts1, const TimeSeries &ts2, int ts
 
   free(tuples);
   free(dusts);
-  checkCudaErrors(cudaFree(tuples_GPU);
-                  checkCudaErrors(cudaFree(dusts_GPU));
+  checkCudaErrors(cudaFree(tuples_GPU));
+  checkCudaErrors(cudaFree(dusts_GPU));
 
-                  return sqrt(dust_sum);
-                  }
+  return sqrt(dust_sum);
+}
 
-    // Match 1 ts to all ts in tsc.
-    // Repeat Integrator::distance for all combination.
-    void
-    SimpsonIntegrator::match_naive(const TimeSeries &ts, const TimeSeriesCollection &tsc) {
-    // Determine the length of time series.
-    unsigned int ts_length = ts.length();
-    for (int i = 0; i < tsc.sequences.size(); i++) {
-      ts_length = min(ts_length, tsc.sequences[i].length());
-    }
-
-    float DUST_min;
-    float i_min;
-    for (int i = 0; i < tsc.sequences.size(); i++) {
-      float DUST = this->distance(ts, tsc.sequences[i], ts_length);
-      if (DUST < DUST_min || i == 0) {
-        DUST_min = DUST;
-        i_min = i;
-      }
-    }
-
-    std::cout << "matched : " << ts_length << std::endl;
-    std::cout << "\t index: " << i_min
-              << ", distance : " << DUST_min << std::endl;
+// Match 1 ts to all ts in tsc.
+// Repeat Integrator::distance for all combination.
+void
+SimpsonIntegrator::match_naive(const TimeSeries &ts, const TimeSeriesCollection &tsc) {
+  // Determine the length of time series.
+  unsigned int ts_length = ts.length();
+  for (int i = 0; i < tsc.sequences.size(); i++) {
+    ts_length = min(ts_length, tsc.sequences[i].length());
   }
 
-
-  // Match 1 ts to all ts in tsc
-  // Optimized version.
-  void
-    SimpsonIntegrator::match(const TimeSeries &ts, const TimeSeriesCollection &tsc) {
-    this->prepare_match(ts, tsc);
-
-    g_match_simpson<<< ts_length, TPB >>>(ts_D,
-                                          tsc_D,
-                                          dusts_D,
-                                          ts_length,
-                                          ts_num,
-                                          1024);
-
-    int i_min;
-    float DUST_min;
-    this->finish_match(&i_min, &DUST_min);
-
-    std::cout << "matched : " << ts_length << std::endl;
-    std::cout << "\t index: " << i_min
-              << ", distance: " << DUST_min << std::endl;
+  float DUST_min;
+  float i_min;
+  for (int i = 0; i < tsc.sequences.size(); i++) {
+    float DUST = this->distance(ts, tsc.sequences[i], ts_length);
+    if (DUST < DUST_min || i == 0) {
+      DUST_min = DUST;
+      i_min = i;
+    }
   }
+
+  std::cout << "matched : " << ts_length << std::endl;
+  std::cout << "\t index: " << i_min
+            << ", distance : " << DUST_min << std::endl;
+}
+
+
+// Match 1 ts to all ts in tsc
+// Optimized version.
+void
+SimpsonIntegrator::match(const TimeSeries &ts, const TimeSeriesCollection &tsc) {
+  this->prepare_match(ts, tsc);
+
+  g_match_simpson<<< ts_length, TPB >>>(ts_D,
+                                        tsc_D,
+                                        dusts_D,
+                                        ts_length,
+                                        ts_num,
+                                        1024);
+
+  int i_min;
+  float DUST_min;
+  this->finish_match(&i_min, &DUST_min);
+
+  std::cout << "matched : " << ts_length << std::endl;
+  std::cout << "\t index: " << i_min
+            << ", distance: " << DUST_min << std::endl;
+}

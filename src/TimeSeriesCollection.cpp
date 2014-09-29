@@ -49,9 +49,9 @@ struct mycompare {
 
 void
 TimeSeriesCollection::computeTopKthresholds(unsigned int K,
-                                            const std::vector< PairIdDistance > &topIdDists) {
+                                            std::vector< PairIdDistance > *topIdDists) {
   assert(sequences.size() >= K);
-  topIdDists.resize(sequences.size());
+  topIdDists->resize(sequences.size());
 
   std::cout << "resized" << std::endl;
 
@@ -68,7 +68,7 @@ TimeSeriesCollection::computeTopKthresholds(unsigned int K,
     }
 
     std::sort(distances.begin(), distances.end(), mycompare());
-    topIdDists[q.getId() - 1] = distances[K];
+    (*topIdDists)[q.getId() - 1] = distances[K];
   }
 }
 
@@ -79,13 +79,13 @@ TimeSeriesCollection::normalize() {
   }
 }
 
-void TimeSeriesCollection::printSeqs() {
+void TimeSeriesCollection::printSeqs() const {
   for (int i = 0; i < sequences.size(); i++) {
     sequences[i].printSeq();
   }
 }
 
-int TimeSeriesCollection::length_min() {
+int TimeSeriesCollection::length_min() const {
   int l = this->sequences[0].length();
   for (int i = 1; i < this->sequences.size(); i++) {
     l = std::min(l, static_cast<int>(this->sequences[i].length()));
