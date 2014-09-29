@@ -13,7 +13,7 @@
 #include <unistd.h>
 #include <boost/foreach.hpp>
 #include <boost/program_options.hpp>
-#include "dataset.hpp"
+#include "DataSet.hpp"
 #include "common.hpp"
 #include "TimeSeries.hpp"
 #include "TimeSeriesCollection.hpp"
