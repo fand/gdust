@@ -370,7 +370,6 @@ DUST::buildFDustTables(const char *path) {
     for (double stddev0 = STDDEV_BEGIN; stddev0 < STDDEV_END + STDDEV_STEP / 2.0; stddev0 += STDDEV_STEP) {
       for (double stddev1 = stddev0; stddev1 < STDDEV_END + STDDEV_STEP / 2.0; stddev1 += STDDEV_STEP) {
         for (double distance = DISTANCE_BEGIN; distance < DISTANCE_END + DISTANCE_STEP / 2.0; distance += DISTANCE_STEP) {
-
           RandomVariable x = RandomVariable(distribution, 0.0f, 0.0f,
                                             static_cast<float>(stddev0));
           RandomVariable y = RandomVariable(distribution,

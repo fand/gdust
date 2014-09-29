@@ -17,15 +17,9 @@ clean_probability(float p) {
 GDUST::GDUST(const TimeSeriesCollection &collection, const Integrator::Method method) {
   collection = collection;
   integrator = Integrator::create(method);
-  init();
 }
 
 GDUST::~GDUST() {}
-
-void
-GDUST::init() {
-  lookupTablesAvailable = false;
-}
 
 float
 GDUST::distance(const TimeSeries &ts1, const TimeSeries &ts2, const int n) {

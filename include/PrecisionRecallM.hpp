@@ -5,31 +5,28 @@
 #include <vector>
 
 
-class PrecisionRecallM
-{
-public:
-    PrecisionRecallM(const char *s);
+class PrecisionRecallM {
+ public:
+  explicit PrecisionRecallM(const char *s);
 
-    void addStartTime();
-    void addStopTime();
-    void add(std::vector< int > &exact, std::vector< int > &estimate);
-    
-    float getPrecision();
-    float getRecall();
-    float getF1();
-    float getTime();
+  void addStartTime();
+  void addStopTime();
+  void add(const std::vector< int > &exact, const std::vector< int > &estimate);
 
-    void print();
+  float getPrecision();
+  float getRecall();
+  float getF1();
+  float getTime();
 
-    float n;
-    float precision;
-    float recall;
-    float size;
-    float t;
-    float tn;
-    const char *s;
+  void print();
 
-    struct timeval begin;
+  float n;
+  float precision;
+  float recall;
+  float size;
+  float t;
+  float tn;
+  const char *s;
+
+  struct timeval begin;
 };
-
-
