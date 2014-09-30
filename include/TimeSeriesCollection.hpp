@@ -13,13 +13,13 @@ class TimeSeriesCollection {
   TimeSeriesCollection(const char *pathname, int distribution, int limitN = -1);
 
   void readFile(const char *pathname, int distribution, int limitN = -1);
+  void normalize();
+  void printSeqs() const;
+  int length_min() const;
+  int size() const;
+  const TimeSeries& at(int index) const;
 
   void computeTopKthresholds(unsigned int K, std::vector< PairIdDistance > *topIdDist);
 
   std::vector< TimeSeries > sequences;
-
-  void normalize();
-  void printSeqs() const;
-
-  int length_min() const;
 };

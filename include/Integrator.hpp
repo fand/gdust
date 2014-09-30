@@ -16,8 +16,8 @@ class Integrator {
   virtual ~Integrator() {}
 
   virtual float distance(const TimeSeries &ts1, const TimeSeries &ts2, int ts_length) = 0;
-  virtual void match_naive(const TimeSeries &ts, const TimeSeriesCollection &db) = 0;
-  virtual void match(const TimeSeries &ts, const TimeSeriesCollection &db) = 0;
+  virtual int match_naive(const TimeSeries &ts, const TimeSeriesCollection &db) = 0;
+  virtual int match(const TimeSeries &ts, const TimeSeriesCollection &db) = 0;
 
  protected:
   float *ts_H, *tsc_H, *dusts_H;
@@ -33,8 +33,8 @@ class MonteCarloIntegrator : public Integrator {
   MonteCarloIntegrator();
   ~MonteCarloIntegrator();
   float distance(const TimeSeries &ts1, const TimeSeries &ts2, int ts_length);
-  void match_naive(const TimeSeries &ts, const TimeSeriesCollection &db);
-  void match(const TimeSeries &ts, const TimeSeriesCollection &db);
+  int match_naive(const TimeSeries &ts, const TimeSeriesCollection &db);
+  int match(const TimeSeries &ts, const TimeSeriesCollection &db);
 
  private:
   curandGenerator_t *gen;
@@ -47,6 +47,6 @@ class SimpsonIntegrator : public Integrator {
   SimpsonIntegrator();
   ~SimpsonIntegrator();
   float distance(const TimeSeries &ts1, const TimeSeries &ts2, int ts_length);
-  void match_naive(const TimeSeries &ts, const TimeSeriesCollection &db);
-  void match(const TimeSeries &ts, const TimeSeriesCollection &db);
+  int match_naive(const TimeSeries &ts, const TimeSeriesCollection &db);
+  int match(const TimeSeries &ts, const TimeSeriesCollection &db);
 };

@@ -14,33 +14,18 @@ Euclidean::Euclidean(const TimeSeriesCollection &collection, bool exact) {
   largestDistanceId = -1;
 }
 
-std::vector< int > Euclidean::rangeQuery(const TimeSeries &ts, float threshold) {
-  std::vector< int > ids;
-  for (unsigned int i = 0; i < collection.sequences.size(); i++) {
-    if (distance(ts, collection.sequences[i]) <= threshold) {
-      ids.push_back(i + 1);
-    }
-  }
-  return ids;
-}
+double Euclidean::distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) {
 
-float Euclidean::distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) {
-  if (ts1.length() != ts2.length()) {
-    FATAL("ts1 length=" + TO_STR(ts1.length()) +
-          " != ts2 length=" + TO_STR(ts2.length()));
-  }
+  int ts_length = std::min(ts1.length(), ts2.length());
+  ts_length = (n == -1) ? ts_length : std::min(ts_length, n);
 
-  if (n == -1) {
-    n = ts1.length();
-  }
-
-  float dist = 0;
+  double dist = 0.0;
   if (exact) {
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < ts_length; i++) {
       dist += pow(ts1.at(i).groundtruth - ts2.at(i).groundtruth, 2);
     }
   } else {
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < ts_length; i++) {
       dist += pow(ts1.at(i).observation -ts2.at(i).observation, 2);
     }
   }
@@ -116,83 +101,4 @@ float Euclidean::getHeuristicThreshold(float abovePercentual) {
   float coverage = static_cast<float>(counter) / alldists;
   assert(coverage - 0.1 < abovePercentual && coverage + 0.1 > abovePercentual);
   return dd;
-}
-
-double Euclidean::dtw(const TimeSeries &ts1, const TimeSeries &ts2) {
-  int len1 = ts1.length();
-  int len2 = ts2.length();
-  double *table_d = new double[len1 * len2];
-  double *table_g = new double[len1 * len2];
-
-  calcCost(ts1, ts2, table_d, table_g, len1, len2);
-  calcGamma(table_d, table_g, len1, len2);
-  double dist = calcSum(table_d, table_g, len1, len2);
-
-  delete[] table_d;
-  delete[] table_g;
-  return dist;
-}
-
-void Euclidean::calcCost(const TimeSeries &ts1, const TimeSeries &ts2,
-                         double *table_d, double *table_g, int len1, int len2) {
-  for (int i = 0; i < len1; i++) {
-    RandomVariable r1 = ts1.at(i);
-    for (int j = 0; j < len2; j++) {
-      RandomVariable r2 = ts2.at(j);
-      table_d[i * len2 + j] = abs(r1.observation - r2.observation);
-    }
-  }
-}
-
-void Euclidean::calcGamma(double *table_d, double *table_g, int len1, int len2) {
-  table_g[0] = table_d[0];
-
-  for (int i = 1; i < len1; i++) {
-    table_g[i * len2] = table_d[i * len2] + table_g[(i - 1) * len2];
-  }
-
-  for (int i = 1; i < len2; i++) {
-    table_g[i] = table_d[i] + table_g[i - 1];
-  }
-
-  for (int i = 1; i< len1; i++) {
-    for (int j = 1; j < len2; j++) {
-      table_g[i * len2 + j] =
-        table_d[i * len2 + j] +
-        std::min(std::min(table_g[ (i-1) * len2 + j ],
-                          table_g[ i*len2 + j-1 ]),
-                 table_g[ (i-1)*len2 + j-1 ]);
-    }
-  }
-}
-
-double Euclidean::calcSum(double *table_d, double *table_g, int len1, int len2) {
-  double sum = 0.0;
-
-  int i = len1 - 1;
-  int j = len2 - 1;
-
-  while (i > 0 || j > 0) {
-    sum += table_g[i * len2 + j];
-
-    if (i == 0) {
-      j--;
-    } else if (j == 0) {
-      i--;
-    } else {
-      double m = std::min(std::min(table_g[ (i-1)*len2 + j ],
-                                   table_g[ i*len2 + j-1 ]),
-                          table_g[ (i-1)*len2 + j-1 ]);
-
-      if (m == table_g[(i - 1) * len2 + j]) {
-        i--;
-      } else if (m == table_g[i * len2 + j - 1]) {
-        j--;
-      } else {
-        i--; j--;
-      }
-    }
-  }
-
-  return sum;
 }

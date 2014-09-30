@@ -21,19 +21,19 @@ GDUST::GDUST(const TimeSeriesCollection &collection, const Integrator::Method me
 
 GDUST::~GDUST() {}
 
-float
+double
 GDUST::distance(const TimeSeries &ts1, const TimeSeries &ts2, const int n) {
   int ts_length = min(ts1.length(), ts2.length());
   ts_length = (n == -1) ? ts_length : min(ts_length, n);
-  return integrator->distance(ts1, ts2, ts_length);
+  return static_cast<double>(integrator->distance(ts1, ts2, ts_length));
 }
 
-void
+int
 GDUST::match_naive(const TimeSeries &ts) {
-  this->integrator->match_naive(ts, *this->collection);
+  return this->integrator->match_naive(ts, *this->collection);
 }
 
-void
+int
 GDUST::match(const TimeSeries &ts) {
-  integrator->match(ts, *this->collection);
+  return integrator->match(ts, *this->collection);
 }
