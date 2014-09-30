@@ -13,7 +13,7 @@ APPNAME  = bin/gdustdtw
 
 CUDASRC	= $(wildcard src/*.cu)
 CPPSRC	= $(wildcard src/*.cpp)
-OBJ	= $(addsuffix .o, $(basename $(CUDASRC))) $(addsuffix .o, $(basename $(CPPSRC)))
+OBJ	= $(addprefix obj/, $(notdir $(addsuffix .o, $(basename $(CUDASRC))) $(addsuffix .o, $(basename $(CPPSRC)))))
 
 all: executable
 debug: CFLAGS += -DDEBUG -g
@@ -21,11 +21,11 @@ debug: CPPFLAGS += -DDEBUG -g
 debug: executable
 executable:  header $(APPNAME) trailer
 
-src/%.o: src/%.cu
+obj/%.o: src/%.cu
 	@echo Compiling: "$@ ( $< )"
 	@$(CXX) $(CFLAGS) -c -o $@ $<
 
-src/%.o: src/%.cpp
+obj/%.o: src/%.cpp
 	@echo Compiling: "$@ ( $< )"
 	@$(CPX) $(CPPFLAGS) -c -o $@ $<
 
@@ -50,7 +50,7 @@ trailer:
 .PHONY: all clean header dist
 
 clean:
-	@rm -rf src/*.o *.dSYM $(APPNAME)
+	@rm -rf obj/*.o *.dSYM $(APPNAME)
 
 
 # For TEST
