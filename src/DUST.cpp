@@ -53,20 +53,20 @@ DUST::c_distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) {
       drand48_r(&buffer, &rands[i]);
       rands[i] = rands[i] * RANGE_WIDTH + RANGE_MIN;
     }
-  }
 
-#pragma omp parallel for reduction(+: dist)
-  for (int i = 0; i < n; ++i) {
-    RandomVariable x = ts1.at(i);
-    RandomVariable y = ts2.at(i);
+#pragma omp for reduction(+: dist)
+    for (int i = 0; i < n; ++i) {
+      RandomVariable x = ts1.at(i);
+      RandomVariable y = ts2.at(i);
 
-    double params[] = {
-      x.distribution, x.observation, x.stddev,
-      y.distribution, y.observation, y.stddev
-    };
+      double params[] = {
+        x.distribution, x.observation, x.stddev,
+        y.distribution, y.observation, y.stddev
+      };
 
-    double d = c_dust_kernel(params, rands, i);
-    dist += d;
+      double d = c_dust_kernel(params, rands, i);
+      dist += d;
+    }
   }
 
   delete[] rands;
