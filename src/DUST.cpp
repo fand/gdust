@@ -10,10 +10,8 @@
 #include <omp.h>
 #include "common.hpp"
 #include "config.hpp"
-#include "dust_inner.hpp"
+#include "ckernel.hpp"
 
-// local fucntion
-float c_dust_kernel(float *xy, float *samples, int time);
 
 DUST::DUST(const TimeSeriesCollection &collection, const char *lookUpTablesPath) {
   this->collection = collection;
@@ -44,7 +42,6 @@ DUST::c_distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) {
 
   const int num_rands = n * 3 * INTEGRATION_SAMPLES;
   __attribute__((aligned(64))) double *rands = new double[num_rands];
-  float *frands = new float[num_rands];
 
 #pragma omp parallel
   {
@@ -54,7 +51,7 @@ DUST::c_distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) {
 #pragma omp for schedule(static)
     for (int i = 0; i < num_rands; ++i) {
       drand48_r(&buffer, &rands[i]);
-      frands[i] = static_cast<float>(rands[i] * RANGE_WIDTH + RANGE_MIN);
+      rands[i] = rands[i] * RANGE_WIDTH + RANGE_MIN;
     }
   }
 
@@ -63,17 +60,16 @@ DUST::c_distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) {
     RandomVariable x = ts1.at(i);
     RandomVariable y = ts2.at(i);
 
-    float params[] = {
-      (float)x.distribution, (float)x.observation, (float)x.stddev,
-      (float)y.distribution, (float)y.observation, (float)y.stddev
+    double params[] = {
+      x.distribution, x.observation, x.stddev,
+      y.distribution, y.observation, y.stddev
     };
 
-    float d = c_dust_kernel(params, frands, i);
+    double d = c_dust_kernel(params, rands, i);
     dist += d;
   }
 
   delete[] rands;
-  delete[] frands;
 
   return sqrt(dist);
 }
@@ -122,9 +118,9 @@ double
 DUST::distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) {
   int lim;
   if (n == -1) {
-    lim = min(ts1.length(), ts2.length());
+    lim = fmin(ts1.length(), ts2.length());
   } else {
-    lim = min(n, min(ts1.length(), ts2.length()));
+    lim = fmin(n, fmin(ts1.length(), ts2.length()));
   }
   return this->c_distance(ts1, ts2, lim);
 }
@@ -136,7 +132,7 @@ DUST::match(const TimeSeries &ts, int n) {
   int lim;
   if (n == -1) { lim = ts.length(); }
   for (int i = 0; i < db.sequences.size(); i++) {
-    lim = min(lim, db.sequences[i].length());
+    lim = fmin(lim, db.sequences[i].length());
   }
 
   float distance_min = this->c_distance(ts, db.sequences[0], lim);
@@ -393,38 +389,4 @@ DUST::buildFDustTables(const char *path) {
       }
     }
   }
-}
-
-
-//
-// Functions for dust / DUST
-// ______________________________
-
-float
-c_dust_kernel(float *xy, float *samples, int time) {
-  float o1 = 0.0;
-  float o2 = 0.0;
-  float o3 = 0.0;
-
-  int offset = time * 3 * INTEGRATION_SAMPLES;
-  float *local_samples = samples + offset;
-  for (int i = 0; i < INTEGRATION_SAMPLES; ++i) {
-    o1 += f1(local_samples[i * 3    ], xy);
-    o2 += f2(local_samples[i * 3 + 1], xy);
-    o3 += f3(local_samples[i * 3 + 2], xy);
-  }
-
-  float r = static_cast<float>(RANGE_WIDTH) / INTEGRATION_SAMPLES;
-  float int1 = o1 * r;
-  float int2 = o2 * r;
-  float int3 = o3 * r;
-  if (int1 < VERYSMALL) int1 = VERYSMALL;
-  if (int2 < VERYSMALL) int2 = VERYSMALL;
-  if (int3 < 0.0) int3 = 0.0;
-
-  float d = -log10(int3 / (int1 * int2));
-
-  if (d < 0.0) { d = 0.0; }
-
-  return d;
 }

@@ -59,3 +59,9 @@ class DUST {
   void calcGamma(double *table_d, double *table_g, int len1, int len2);
   double calcSum(double *table_d, double *table_g, int len1, int len2);
 };
+
+
+// Global functions for integration.
+double f1(double *k, size_t dim, void *params);
+double f2(double *k, size_t dim, void *params);
+double f3(double *k, size_t dim, void *params);

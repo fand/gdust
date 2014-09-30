@@ -4,7 +4,7 @@
 
 CXX      = nvcc
 CPX      = g++
-CFLAGS   = -Iinclude -use_fast_math -Xcompiler -fopenmp -arch=sm_35
+CFLAGS   = -Iinclude -use_fast_math -Xcompiler -fopenmp -arch sm_35
 CPPFLAGS = -Iinclude -use_fast_math -O3 -msse2 -msse3 -fopenmp
 LIBS     = -lcurand -lgsl -lgslcblas -lboost_program_options
 APPNAME  = bin/gdustdtw
@@ -23,7 +23,7 @@ executable:  header $(APPNAME) trailer
 
 obj/%.o: src/%.cu
 	@echo Compiling: "$@ ( $< )"
-	@$(CXX) $(CFLAGS) -dc -c -o $@ $<
+	@$(CXX) $(CFLAGS) -c -o $@ $<
 
 obj/%.o: src/%.cpp
 	@echo Compiling: "$@ ( $< )"
