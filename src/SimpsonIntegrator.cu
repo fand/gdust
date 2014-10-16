@@ -71,7 +71,7 @@ SimpsonIntegrator::distance(const TimeSeries &ts1, const TimeSeries &ts2, int ts
 
 // Match 1 ts to all ts in tsc.
 // Repeat Integrator::distance for all combination.
-void
+int
 SimpsonIntegrator::match_naive(const TimeSeries &ts, const TimeSeriesCollection &tsc) {
   // Determine the length of time series.
   unsigned int ts_length = ts.length();
@@ -92,12 +92,13 @@ SimpsonIntegrator::match_naive(const TimeSeries &ts, const TimeSeriesCollection 
   std::cout << "matched : " << ts_length << std::endl;
   std::cout << "\t index: " << i_min
             << ", distance : " << DUST_min << std::endl;
+  return i_min;
 }
 
 
 // Match 1 ts to all ts in tsc
 // Optimized version.
-void
+int
 SimpsonIntegrator::match(const TimeSeries &ts, const TimeSeriesCollection &tsc) {
   this->prepare_match(ts, tsc);
 
@@ -115,4 +116,5 @@ SimpsonIntegrator::match(const TimeSeries &ts, const TimeSeriesCollection &tsc) 
   std::cout << "matched : " << ts_length << std::endl;
   std::cout << "\t index: " << i_min
             << ", distance: " << DUST_min << std::endl;
+  return i_min;
 }

@@ -92,3 +92,11 @@ int TimeSeriesCollection::length_min() const {
   }
   return l;
 }
+
+int TimeSeriesCollection::size() const {
+  return this->sequences.size();
+}
+
+const TimeSeries& TimeSeriesCollection::at(int index) const {
+  return this->sequences.at(index);
+}

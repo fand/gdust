@@ -1,27 +1,22 @@
 #pragma once
 
 #include <vector>
+#include "Distance.hpp"
 #include "TimeSeries.hpp"
 #include "TimeSeriesCollection.hpp"
 
 
-class Euclidean {
+class Euclidean : public Distance {
  public:
   explicit Euclidean(const TimeSeriesCollection &collection, bool exact = false);
-  std::vector< int > rangeQuery(const TimeSeries &ts, float threshold);
-  float distance(const TimeSeries &ts1, const TimeSeries &ts2, int n = -1);
-  double dtw(const TimeSeries &ts1, const TimeSeries &ts2);
+  ~Euclidean() {};
 
-  int largestDistanceId;
-  TimeSeriesCollection collection;
-
+  double distance(const TimeSeries &ts1, const TimeSeries &ts2, int n = -1);
   float getHeuristicThreshold(float abovePercentual);
 
-  bool exact;
+  bool exact;  // Use groundtruth or not
 
  private:
-  void calcCost(const TimeSeries &ts1, const TimeSeries &ts2,
-                double *table_d, double *table_g, int len1, int len2);
-  void calcGamma(double *table_d, double *table_g, int len1, int len2);
-  double calcSum(double *table_d, double *table_g, int len1, int len2);
+  int largestDistanceId;
+  TimeSeriesCollection collection;
 };

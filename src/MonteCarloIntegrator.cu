@@ -85,7 +85,7 @@ MonteCarloIntegrator::distance(const TimeSeries &ts1, const TimeSeries &ts2, int
 
 // Match 1 ts to all ts in tsc.
 // Repeat Integrator::distance for all combination.
-void
+int
 MonteCarloIntegrator::match_naive(const TimeSeries &ts, const TimeSeriesCollection &tsc) {
   // Determine the length of time series.
   unsigned int ts_length = min(ts.length(), tsc.length_min());
@@ -105,12 +105,13 @@ MonteCarloIntegrator::match_naive(const TimeSeries &ts, const TimeSeriesCollecti
 
   std::cout << "matched : " << ts_length << std::endl;
   std::cout << "\t index: " << i_min << ", distance : " << DUST_min << std::endl;
+  return i_min;
 }
 
 
 // Match 1 ts to all ts in tsc
 // Optimized version.
-void
+int
 MonteCarloIntegrator::match(const TimeSeries &ts, const TimeSeriesCollection &tsc) {
   this->prepare_match(ts, tsc);
 
@@ -133,4 +134,5 @@ MonteCarloIntegrator::match(const TimeSeries &ts, const TimeSeriesCollection &ts
 
   std::cout << "matched : " << ts_length << std::endl;
   std::cout << "\t index: " << i_min << ", distance: " << DUST_min << std::endl;
+  return i_min;
 }
