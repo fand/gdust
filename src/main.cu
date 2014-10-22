@@ -43,6 +43,7 @@ void exp4(std::vector<std::string>);
 void exp5(std::vector<std::string>);
 void exp6(std::vector<std::string>);
 void exp7(std::vector<std::string>);
+void exp8(std::vector<std::string>);
 void ftest(std::vector<std::string>);
 
 boost::program_options::variables_map initOpt(int argc, char **argv) {
@@ -91,6 +92,7 @@ main(int argc, char **argv) {
       case 5: exp5(files); break;
       case 6: exp6(files); break;
       case 7: exp7(files); break;
+      case 8: exp8(files); break;
       }
     }
   } else if (vm.count("test")) {
@@ -400,6 +402,26 @@ exp7(std::vector<std::string> argv) {
   std::cout << "simpson_naive: " << time_simpson_naive << std::endl;
   std::cout << "simpson: " << time_simpson << std::endl;
   std::cout << "cpu  : " << time_cpu   << std::endl;
+}
+
+// Check execution time of Simpson match
+void
+exp8(std::vector<std::string> argv) {
+
+  TimeSeriesCollection db(argv[0].c_str(), 2, -1);
+  db.normalize();
+
+  GDUST gdust(db);
+  GDUST gdust_simpson(db, Integrator::Simpson);
+  Euclidean  eucl(db);
+  Watch watch;
+
+  for (int i = 0; i < db.sequences.size() - 1; i++) {
+    TimeSeries &ts = db.sequences[i];
+    eucl.match(ts);
+    gdust.match_naive(ts);
+    gdust_simpson.match_naive(ts);
+  }
 }
 
 void
