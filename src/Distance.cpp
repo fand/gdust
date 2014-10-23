@@ -7,8 +7,8 @@ std::vector<int>
 Distance::rangeQuery(const TimeSeries ts, double threshold) {
   std::vector< int > ids;
 
-  for (int i = 0; i < collection.size(); i++) {
-    double dist = this->distance(ts, collection.at(i));
+  for (int i = 0; i < collection->size(); i++) {
+    double dist = this->distance(ts, collection->at(i));
     if (dist <= threshold) {
       ids.push_back(i);
     }
@@ -110,17 +110,21 @@ Distance::difference(const RandomVariable &r1, const RandomVariable &r2) {
 
 int
 Distance::match(const TimeSeries &ts) {
-  const TimeSeriesCollection &db = this->collection;
+  const TimeSeriesCollection *db = this->collection;
+  std::cout << "this: " << this << std::endl;
+  std::cout << "db size: " << this->collection->sequences.size() << std::endl;
+  std::cout << "db size: " << db->sequences.size() << std::endl;
 
   int ts_length = ts.length();
-  for (int i = 0; i < db.sequences.size(); i++) {
-    ts_length = std::min(ts_length, (int)db.sequences[i].length());
+  for (int i = 0; i < db->sequences.size(); i++) {
+    ts_length = std::min(ts_length, (int)db->sequences[i].length());
   }
-
-  float distance_min = this->distance(ts, db.sequences[0], ts_length);
+  float distance_min = this->distance(ts, db->sequences[0], ts_length);
   float i_min = 0;
-  for (int i = 1; i < db.sequences.size(); i++) {
-    float d = this->distance(ts, db.sequences[i], ts_length);
+
+  for (int i = 1; i < db->sequences.size(); i++) {
+    float d = this->distance(ts, db->sequences[i], ts_length);
+    //std::cout << "dis: " << d << std::endl;
     if (d < distance_min) {
       distance_min = d;
       i_min = i;

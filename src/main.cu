@@ -19,7 +19,7 @@
 #include "TimeSeriesCollection.hpp"
 #include "PrecisionRecallM.hpp"
 #include "Euclidean.hpp"
-#include "DUST.hpp"
+//#include "DUST.hpp"
 #include "GDUST.hpp"
 #include "Watch.hpp"
 #include "config.hpp"
@@ -113,7 +113,7 @@ checkDistance(int argc, char **argv) {
   // MUST DO THIS FIRST!!! (for X-ray data)
   db.normalize();
 
-  DUST dust(db);
+  // DUST dust(db);
   GDUST gdust(db);
   Euclidean eucl(db);
 
@@ -135,11 +135,11 @@ checkDistance(int argc, char **argv) {
       std::cout << i << "-" << j << " gdustdist :" << gdustdist
                 << " time: " << watch.getInterval() << std::endl;
 
-      watch.start();
-      double dustdist = dust.distance(ts1, ts2);
-      watch.stop();
-      std::cout << i << "-" << j << " dustdist :" << dustdist
-                << " time: " << watch.getInterval() << std::endl;
+      // watch.start();
+      // double dustdist = dust.distance(ts1, ts2);
+      // watch.stop();
+      // std::cout << i << "-" << j << " dustdist :" << dustdist
+      //           << " time: " << watch.getInterval() << std::endl;
 
       // watch.start();
       // double eucldist = eucl.distance(ts1, ts2);
@@ -156,7 +156,7 @@ exp1(std::vector<std::string> argv) {
   TimeSeriesCollection db(argv[1].c_str() , 2, -1); // distribution is normal
   db.normalize();
 
-  DUST dust(db);
+  // DUST dust(db);
   GDUST gdust(db);
   Watch watch;
 
@@ -173,10 +173,10 @@ exp1(std::vector<std::string> argv) {
       watch.stop();
       time_gpu += watch.getInterval();
 
-      watch.start();
-      double dustdist = dust.distance(ts1, ts2, -1);
-      watch.stop();
-      time_cpu += watch.getInterval();
+      // watch.start();
+      // double dustdist = dust.distance(ts1, ts2, -1);
+      // watch.stop();
+      // time_cpu += watch.getInterval();
     }
   }
 
@@ -194,7 +194,7 @@ exp2(std::vector<std::string> argv) {
     TimeSeriesCollection db(filename, 2, -1);
     db.normalize();
 
-    DUST dust(db);
+    // DUST dust(db);
     GDUST gdust(db);
     Watch watch;
 
@@ -217,11 +217,11 @@ exp2(std::vector<std::string> argv) {
         time_gpu += watch.getInterval();
         res_gpu += gdustdist;
 
-        watch.start();
-        double dustdist = dust.distance(ts1, ts2, -1);
-        watch.stop();
-        time_cpu += watch.getInterval();
-        res_cpu += dustdist;
+        // watch.start();
+        // double dustdist = dust.distance(ts1, ts2, -1);
+        // watch.stop();
+        // time_cpu += watch.getInterval();
+        // res_cpu += dustdist;
       }
     }
 
@@ -238,7 +238,7 @@ exp3(std::vector<std::string> argv) {
   TimeSeriesCollection db(argv[1].c_str(), 2, -1);
   db.normalize();
 
-  DUST dust(db);
+  // DUST dust(db);
   GDUST gdust(db);
   Watch watch;
 
@@ -255,10 +255,10 @@ exp3(std::vector<std::string> argv) {
       watch.stop();
       time_gpu += watch.getInterval();
 
-      watch.start();
-      double dustdist = dust.distance(ts1, ts2, -1);
-      watch.stop();
-      time_cpu += watch.getInterval();
+      // watch.start();
+      // double dustdist = dust.distance(ts1, ts2, -1);
+      // watch.stop();
+      // time_cpu += watch.getInterval();
     }
   }
 
@@ -276,7 +276,7 @@ exp4(std::vector<std::string> argv) {
   db2.normalize();
 
   GDUST gdust(db);
-  DUST  dust(db);
+  // DUST  dust(db);
   Watch watch;
 
   double time_naive = 0;
@@ -295,10 +295,10 @@ exp4(std::vector<std::string> argv) {
   watch.stop();
   time_multi = watch.getInterval();
 
-  watch.start();
-  dust.match(ts);
-  watch.stop();
-  time_cpu = watch.getInterval();
+  // watch.start();
+  // dust.match(ts);
+  // watch.stop();
+  // time_cpu = watch.getInterval();
 
   std::cout << "naive: " << time_naive << std::endl;
   std::cout << "multi: " << time_multi << std::endl;
@@ -344,11 +344,11 @@ exp6(std::vector<std::string> argv) {
 
   GDUST gdust(db);
   GDUST gdust_simpson(db, Integrator::Simpson);
-  DUST  dust(db);
+  // DUST  dust(db);
 
   gdust.match(ts);
   gdust_simpson.match(ts);
-  dust.match(ts);
+  // dust.match(ts);
 }
 
 // Check execution time of Simpson match
@@ -361,7 +361,7 @@ exp7(std::vector<std::string> argv) {
 
   GDUST gdust(db);
   GDUST gdust_simpson(db, Integrator::Simpson);
-  DUST  dust(db);
+  // DUST  dust(db);
   Watch watch;
 
   double time_montecarlo_naive = 0;
@@ -392,10 +392,10 @@ exp7(std::vector<std::string> argv) {
   watch.stop();
   time_simpson = watch.getInterval();
 
-  watch.start();
-  dust.match(ts);
-  watch.stop();
-  time_cpu = watch.getInterval();
+  // watch.start();
+  // dust.match(ts);
+  // watch.stop();
+  // time_cpu = watch.getInterval();
 
   std::cout << "montecarlo_naive: " << time_montecarlo_naive << std::endl;
   std::cout << "montecarlo: " << time_montecarlo << std::endl;
@@ -410,14 +410,17 @@ exp8(std::vector<std::string> argv) {
 
   TimeSeriesCollection db(argv[0].c_str(), 2, -1);
   db.normalize();
+  TimeSeriesCollection db2(argv[1].c_str(), 2, -1);
+  db2.normalize();
 
   GDUST gdust(db);
   GDUST gdust_simpson(db, Integrator::Simpson);
-  Euclidean  eucl(db);
+  Euclidean  eucl(db, 0);
   Watch watch;
 
-  for (int i = 0; i < db.sequences.size() - 1; i++) {
-    TimeSeries &ts = db.sequences[i];
+  for (int i = 0; i < db.sequences.size(); i++) {
+    std::cout << "################ ts : " << i << std::endl;
+    TimeSeries &ts = db2.sequences[i];
     eucl.match(ts);
     gdust.match_naive(ts);
     gdust_simpson.match_naive(ts);

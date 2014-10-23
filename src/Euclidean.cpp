@@ -9,13 +9,14 @@
 
 
 Euclidean::Euclidean(const TimeSeriesCollection &collection, bool exact) {
-  this->collection = collection;
+  this->collection = &collection;
   this->exact = exact;
   largestDistanceId = -1;
+  std::cout << "this: " << this << std::endl;
+  std::cout << "db size: " << this->collection->sequences.size() << std::endl;
 }
 
 double Euclidean::distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) {
-
   int ts_length = std::min(ts1.length(), ts2.length());
   ts_length = (n == -1) ? ts_length : std::min(ts_length, n);
 
@@ -42,10 +43,10 @@ float Euclidean::getHeuristicThreshold(float abovePercentual) {
 
   float min = -1, max = -1;
 
-  for (unsigned int i = 0; i < collection.sequences.size(); i++) {
-    for (unsigned int j = i+1; j < collection.sequences.size(); j++) {
-      TimeSeries &t1 = collection.sequences[i];
-      TimeSeries &t2 = collection.sequences[j];
+  for (unsigned int i = 0; i < collection->sequences.size(); i++) {
+    for (unsigned int j = i+1; j < collection->sequences.size(); j++) {
+      const TimeSeries &t1 = collection->sequences[i];
+      const TimeSeries &t2 = collection->sequences[j];
       float d = distance(t1, t2);
 
       if (min == -1) {
@@ -62,12 +63,12 @@ float Euclidean::getHeuristicThreshold(float abovePercentual) {
 
   float nmax = max - min;
 
-  float alldists = pow(collection.sequences.size(), 2.0) / 2.0 - collection.sequences.size();
+  float alldists = pow(collection->sequences.size(), 2.0) / 2.0 - collection->sequences.size();
 
-  for (unsigned int i = 0; i < collection.sequences.size(); i++) {
-    for (unsigned int j = i+1; j < collection.sequences.size(); j++) {
-      TimeSeries &t1 = collection.sequences[i];
-      TimeSeries &t2 = collection.sequences[j];
+  for (unsigned int i = 0; i < collection->sequences.size(); i++) {
+    for (unsigned int j = i+1; j < collection->sequences.size(); j++) {
+      const TimeSeries &t1 = collection->sequences[i];
+      const TimeSeries &t2 = collection->sequences[j];
       float d = distance(t1, t2) - min;
       histogram[static_cast<int>(ceil(d / nmax * (1000 - 1)))]++;
     }
@@ -88,10 +89,10 @@ float Euclidean::getHeuristicThreshold(float abovePercentual) {
 
   counter = 0;
 
-  for (unsigned int i = 0; i < collection.sequences.size(); i++) {
-    for (unsigned int j = i+1; j < collection.sequences.size(); j++) {
-      TimeSeries &t1 = collection.sequences[i];
-      TimeSeries &t2 = collection.sequences[j];
+  for (unsigned int i = 0; i < collection->sequences.size(); i++) {
+    for (unsigned int j = i+1; j < collection->sequences.size(); j++) {
+      const TimeSeries &t1 = collection->sequences[i];
+      const TimeSeries &t2 = collection->sequences[j];
       if (distance(t1, t2) <= dd) {
         counter++;
       }

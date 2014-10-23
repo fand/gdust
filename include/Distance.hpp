@@ -15,8 +15,7 @@ class Distance {
   virtual std::vector<int> rangeQuery(TimeSeries ts, double threshold);
 
  private:
-  const TimeSeriesCollection collection;
-
+  const TimeSeriesCollection *collection;
   void calcCost(const TimeSeries &ts1, const TimeSeries &ts2,
                 double *table_d, double *table_g, int len1, int len2);
   void calcGamma(double *table_d, double *table_g, int len1, int len2);
