@@ -18,5 +18,4 @@ class Euclidean : public Distance {
 
  private:
   int largestDistanceId;
-  const TimeSeriesCollection *collection;
 };

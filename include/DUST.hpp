@@ -27,7 +27,6 @@ class DUST : public Distance {
   double distance_inner(const TimeSeries &ts1, const TimeSeries &ts2, int n);
   double phi(const RandomVariable &x, const RandomVariable &y);
 
-  TimeSeriesCollection collection;
   gsl_rng *r_rng;
   const gsl_rng_type *T;
 };

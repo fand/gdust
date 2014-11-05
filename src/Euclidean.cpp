@@ -12,8 +12,6 @@ Euclidean::Euclidean(const TimeSeriesCollection &collection, bool exact) {
   this->collection = &collection;
   this->exact = exact;
   largestDistanceId = -1;
-  std::cout << "this: " << this << std::endl;
-  std::cout << "db size: " << this->collection->sequences.size() << std::endl;
 }
 
 double Euclidean::distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) {

@@ -19,6 +19,5 @@ class GDUST : public Distance {
   int match(const TimeSeries &ts);
 
  private:
-  const TimeSeriesCollection *collection;
   Integrator *integrator;
 };

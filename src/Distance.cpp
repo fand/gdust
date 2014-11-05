@@ -111,9 +111,6 @@ Distance::difference(const RandomVariable &r1, const RandomVariable &r2) {
 int
 Distance::match(const TimeSeries &ts) {
   const TimeSeriesCollection *db = this->collection;
-  std::cout << "this: " << this << std::endl;
-  std::cout << "db size: " << this->collection->sequences.size() << std::endl;
-  std::cout << "db size: " << db->sequences.size() << std::endl;
 
   int ts_length = ts.length();
   for (int i = 0; i < db->sequences.size(); i++) {

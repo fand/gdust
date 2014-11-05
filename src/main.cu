@@ -19,7 +19,7 @@
 #include "TimeSeriesCollection.hpp"
 #include "PrecisionRecallM.hpp"
 #include "Euclidean.hpp"
-//#include "DUST.hpp"
+#include "DUST.hpp"
 #include "GDUST.hpp"
 #include "Watch.hpp"
 #include "config.hpp"
@@ -361,7 +361,7 @@ exp7(std::vector<std::string> argv) {
 
   GDUST gdust(db);
   GDUST gdust_simpson(db, Integrator::Simpson);
-  // DUST  dust(db);
+  DUST  dust(db);
   Watch watch;
 
   double time_montecarlo_naive = 0;
@@ -392,10 +392,10 @@ exp7(std::vector<std::string> argv) {
   watch.stop();
   time_simpson = watch.getInterval();
 
-  // watch.start();
-  // dust.match(ts);
-  // watch.stop();
-  // time_cpu = watch.getInterval();
+  watch.start();
+  dust.match(ts);
+  watch.stop();
+  time_cpu = watch.getInterval();
 
   std::cout << "montecarlo_naive: " << time_montecarlo_naive << std::endl;
   std::cout << "montecarlo: " << time_montecarlo << std::endl;

@@ -20,7 +20,7 @@ clean_probability(double p) {
 
 
 DUST::DUST(const TimeSeriesCollection &collection) {
-  this->collection = collection;
+  this->collection = &collection;
   this->T = gsl_rng_default;
   this->r_rng = gsl_rng_alloc(this->T);
 }
@@ -90,17 +90,17 @@ DUST::distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) {
 
 int
 DUST::match(const TimeSeries &ts) {
-  TimeSeriesCollection &db = this->collection;
+  const TimeSeriesCollection *db = this->collection;
 
   int ts_length = ts.length();
-  for (int i = 0; i < db.sequences.size(); i++) {
-    ts_length = fmin(ts_length, db.sequences[i].length());
+  for (int i = 0; i < db->sequences.size(); i++) {
+    ts_length = fmin(ts_length, db->sequences[i].length());
   }
 
-  float distance_min = this->distance_inner(ts, db.sequences[0], ts_length);
+  float distance_min = this->distance_inner(ts, db->sequences[0], ts_length);
   float i_min = 0;
-  for (int i = 1; i < db.sequences.size(); i++) {
-    float d = this->distance_inner(ts, db.sequences[i], ts_length);
+  for (int i = 1; i < db->sequences.size(); i++) {
+    float d = this->distance_inner(ts, db->sequences[i], ts_length);
     if (d < distance_min) {
       distance_min = d;
       i_min = i;
