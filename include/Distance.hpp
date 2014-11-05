@@ -13,6 +13,7 @@ class Distance {
   virtual double DTW(const TimeSeries &ts1, const TimeSeries &ts2);
   virtual int match(const TimeSeries &ts);
   virtual std::vector<int> rangeQuery(TimeSeries ts, double threshold);
+  virtual std::vector<int> topK(const TimeSeries &ts, int k);
 
  protected:
   const TimeSeriesCollection *collection;

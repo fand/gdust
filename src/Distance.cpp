@@ -1,6 +1,7 @@
 #include "Distance.hpp"
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include <cstdlib>
 
 std::vector<int>
@@ -132,4 +133,35 @@ Distance::match(const TimeSeries &ts) {
   std::cout << "\t index: " << i_min
             << ", distance : " << distance_min << std::endl;
   return i_min;
+}
+
+
+static bool comp(const std::pair<int, float> &l, const std::pair<int, float> &r){
+  return l.second < r.second;
+}
+
+std::vector<int>
+Distance::topK(const TimeSeries &ts, int k) {
+  const TimeSeriesCollection *db = this->collection;
+  int ts_length = ts.length();
+  for (int i = 0; i < db->sequences.size(); i++) {
+    ts_length = std::min(ts_length, (int)db->sequences[i].length());
+  }
+
+  // Get distances
+  std::vector<std::pair<int, float> > pairs;
+  for (int i = 0; i < db->sequences.size(); i++) {
+    float d = this->distance(ts, db->sequences[i], ts_length);
+    pairs.push_back(std::make_pair(i, d));
+  }
+
+  // Sort by value
+  std::sort(pairs.begin(), pairs.end(), comp);
+
+  // Return the indexes of top K.
+  std::vector<int> ret;
+  for (int i = 0; i < k; i++) {
+    ret.push_back(pairs[i].first);
+  }
+  return ret;
 }

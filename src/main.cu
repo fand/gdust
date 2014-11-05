@@ -420,13 +420,13 @@ exp8(std::vector<std::string> argv) {
 
   Watch watch;
 
-  for (int i = 0; i < db.sequences.size(); i++) {
+  for (int i = 0; i < db2.sequences.size(); i++) {
     std::cout << "################ ts : " << i << std::endl;
     TimeSeries &ts = db2.sequences[i];
-    eucl.match(ts);
-    dust.match(ts);
-    gdust.match_naive(ts);
-    gdust_simpson.match_naive(ts);
+    eucl.topK(ts,3);
+    dust.topK(ts,3);
+    gdust.topK(ts,3);
+    gdust_simpson.topK(ts,3);
   }
 }
 
