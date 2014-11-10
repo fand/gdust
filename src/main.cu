@@ -43,7 +43,7 @@ void exp4(std::vector<std::string>);
 void exp5(std::vector<std::string>);
 void exp6(std::vector<std::string>);
 void exp7(std::vector<std::string>);
-void exp8(std::vector<std::string>);
+void exp8(std::vector<std::string>, int k);
 void ftest(std::vector<std::string>);
 
 boost::program_options::variables_map initOpt(int argc, char **argv) {
@@ -52,6 +52,7 @@ boost::program_options::variables_map initOpt(int argc, char **argv) {
   po::options_description hidden("Hidden options");
   po::options_description visible("Allowed options");
   generic.add_options()("exp", po::value< std::vector<int> >(), "exp number to run")("test", "run tests");
+  generic.add_options()("topk,k", po::value< int >(), "top k number")("test", "run tests");
   hidden.add_options()("file", po::value< std::vector<std::string> >(), "input file");
   visible.add(generic).add(hidden);
 
@@ -80,6 +81,7 @@ main(int argc, char **argv) {
   }
 
   std::vector<std::string>  files = vm["file"].as< std::vector<std::string> >();
+  int k = vm["topk"].as< int >();
 
   if (vm.count("exp")) {
     std::vector<int> exps = vm["exp"].as< std::vector<int> >();
@@ -92,7 +94,7 @@ main(int argc, char **argv) {
       case 5: exp5(files); break;
       case 6: exp6(files); break;
       case 7: exp7(files); break;
-      case 8: exp8(files); break;
+      case 8: exp8(files, k); break;
       }
     }
   } else if (vm.count("test")) {
@@ -398,15 +400,15 @@ exp7(std::vector<std::string> argv) {
   time_cpu = watch.getInterval();
 
   std::cout << "montecarlo_naive: " << time_montecarlo_naive << std::endl;
-  std::cout << "montecarlo: " << time_montecarlo << std::endl;
-  std::cout << "simpson_naive: " << time_simpson_naive << std::endl;
-  std::cout << "simpson: " << time_simpson << std::endl;
-  std::cout << "cpu  : " << time_cpu   << std::endl;
+  std::cout << "montecarlo: "       << time_montecarlo       << std::endl;
+  std::cout << "simpson_naive: "    << time_simpson_naive    << std::endl;
+  std::cout << "simpson: "          << time_simpson          << std::endl;
+  std::cout << "cpu  : "            << time_cpu              << std::endl;
 }
 
 // Check execution time of Simpson match
 void
-exp8(std::vector<std::string> argv) {
+exp8(std::vector<std::string> argv, int k) {
 
   TimeSeriesCollection db(argv[0].c_str(), 2, -1);
   db.normalize();
@@ -420,13 +422,32 @@ exp8(std::vector<std::string> argv) {
 
   Watch watch;
 
+  std::cout << "top k: " << k << std::endl;
+
   for (int i = 0; i < db2.sequences.size(); i++) {
     std::cout << "################ ts : " << i << std::endl;
     TimeSeries &ts = db2.sequences[i];
-    eucl.topK(ts,3);
-    dust.topK(ts,3);
-    gdust.topK(ts,3);
-    gdust_simpson.topK(ts,3);
+
+    std::vector<int>top_eucl          = eucl.topK(ts, k);
+    std::vector<int>top_dust          = dust.topK(ts, k);
+    std::vector<int>top_gdust         = gdust.topK(ts, k);
+    std::vector<int>top_gdust_simpson = gdust_simpson.topK(ts, k);
+
+    std::cout << "eucl:          ";
+    for (int j = 0; j < k; j++) { std::cout << top_eucl[j] << ", "; }
+    std::cout << std::endl;
+
+    std::cout << "dust:          ";
+    for (int j = 0; j < k; j++) { std::cout << top_dust[j] << ", "; }
+    std::cout << std::endl;
+
+    std::cout << "gdust:         ";
+    for (int j = 0; j < k; j++) { std::cout << top_gdust[j] << ", "; }
+    std::cout << std::endl;
+
+    std::cout << "gdust_simpson: ";
+    for (int j = 0; j < k; j++) { std::cout << top_gdust_simpson[j] << ", "; }
+    std::cout << std::endl;
   }
 }
 
