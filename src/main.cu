@@ -43,7 +43,7 @@ void exp4(std::vector<std::string>);
 void exp5(std::vector<std::string>);
 void exp6(std::vector<std::string>);
 void exp7(std::vector<std::string>);
-void exp8(std::vector<std::string>, int k);
+void exp8(std::vector<std::string>, int target, int k);
 void ftest(std::vector<std::string>);
 
 boost::program_options::variables_map initOpt(int argc, char **argv) {
@@ -52,6 +52,7 @@ boost::program_options::variables_map initOpt(int argc, char **argv) {
   po::options_description hidden("Hidden options");
   po::options_description visible("Allowed options");
   generic.add_options()("exp", po::value< std::vector<int> >(), "exp number to run")("test", "run tests");
+  generic.add_options()("target", po::value< int >(), "index of target timeseries")("test", "run tests");
   generic.add_options()("topk,k", po::value< int >(), "top k number")("test", "run tests");
   hidden.add_options()("file", po::value< std::vector<std::string> >(), "input file");
   visible.add(generic).add(hidden);
@@ -82,6 +83,7 @@ main(int argc, char **argv) {
 
   std::vector<std::string>  files = vm["file"].as< std::vector<std::string> >();
   int k = vm["topk"].as< int >();
+  int target = vm["target"].as< int >();
 
   if (vm.count("exp")) {
     std::vector<int> exps = vm["exp"].as< std::vector<int> >();
@@ -94,7 +96,7 @@ main(int argc, char **argv) {
       case 5: exp5(files); break;
       case 6: exp6(files); break;
       case 7: exp7(files); break;
-      case 8: exp8(files, k); break;
+      case 8: exp8(files, target, k); break;
       }
     }
   } else if (vm.count("test")) {
@@ -408,7 +410,7 @@ exp7(std::vector<std::string> argv) {
 
 // Check execution time of Simpson match
 void
-exp8(std::vector<std::string> argv, int k) {
+exp8(std::vector<std::string> argv, int target, int k) {
 
   TimeSeriesCollection db(argv[0].c_str(), 2, -1);
   db.normalize();
@@ -424,31 +426,34 @@ exp8(std::vector<std::string> argv, int k) {
 
   std::cout << "top k: " << k << std::endl;
 
-  for (int i = 0; i < db2.sequences.size(); i++) {
-    std::cout << "################ ts : " << i << std::endl;
-    TimeSeries &ts = db2.sequences[i];
-
-    std::vector<int>top_eucl          = eucl.topK(ts, k);
-    std::vector<int>top_dust          = dust.topK(ts, k);
-    std::vector<int>top_gdust         = gdust.topK(ts, k);
-    std::vector<int>top_gdust_simpson = gdust_simpson.topK(ts, k);
-
-    std::cout << "eucl:          ";
-    for (int j = 0; j < k; j++) { std::cout << top_eucl[j] << ", "; }
-    std::cout << std::endl;
-
-    std::cout << "dust:          ";
-    for (int j = 0; j < k; j++) { std::cout << top_dust[j] << ", "; }
-    std::cout << std::endl;
-
-    std::cout << "gdust:         ";
-    for (int j = 0; j < k; j++) { std::cout << top_gdust[j] << ", "; }
-    std::cout << std::endl;
-
-    std::cout << "gdust_simpson: ";
-    for (int j = 0; j < k; j++) { std::cout << top_gdust_simpson[j] << ", "; }
-    std::cout << std::endl;
+  //if (target < 0 || db2.sequences.size() < target) {
+  if (target == 10) {
+    std::cout << "Invalid index! : " << target << std::endl;
+    exit(-1);
   }
+  std::cout << "################ ts : " << target << std::endl;
+  TimeSeries &ts = db2.sequences[target];
+
+  std::vector<int>top_eucl          = eucl.topK(ts, k);
+  std::vector<int>top_dust          = dust.topK(ts, k);
+  std::vector<int>top_gdust         = gdust.topK(ts, k);
+  std::vector<int>top_gdust_simpson = gdust_simpson.topK(ts, k);
+
+  std::cout << "eucl:          ";
+  for (int j = 0; j < k; j++) { std::cout << top_eucl[j] << ", "; }
+  std::cout << std::endl;
+
+  std::cout << "dust:          ";
+  for (int j = 0; j < k; j++) { std::cout << top_dust[j] << ", "; }
+  std::cout << std::endl;
+
+  std::cout << "gdust:         ";
+  for (int j = 0; j < k; j++) { std::cout << top_gdust[j] << ", "; }
+  std::cout << std::endl;
+
+  std::cout << "gdust_simpson: ";
+  for (int j = 0; j < k; j++) { std::cout << top_gdust_simpson[j] << ", "; }
+  std::cout << std::endl;
 }
 
 void
