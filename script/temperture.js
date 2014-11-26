@@ -18,7 +18,7 @@ var watch = function (cb) {
     }, 30000);
   }
   else {
-    console.log('############################### temperature: ', temperature);
+    // console.log('############################### temperature: ', temperature);
     cb();
   }
 };
@@ -26,14 +26,14 @@ var watch = function (cb) {
 var exp = function () {
   try {
     var result = execSync(expCmd + ' --target ' + i);
-    console.log('result: ', result + "");
+    // console.log('result: ', result + "");
     if (result == -1) { return; }
     watch(function () {
       exp(++i);
     });
 
   } catch(e) {
-    console.log('end');
+    // console.log('end');
   }
 };
 

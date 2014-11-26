@@ -426,8 +426,7 @@ exp8(std::vector<std::string> argv, int target, int k) {
 
   std::cout << "top k: " << k << std::endl;
 
-  //if (target < 0 || db2.sequences.size() < target) {
-  if (target == 10) {
+  if (target < 0 || db2.sequences.size() < target) {
     std::cout << "Invalid index! : " << target << std::endl;
     exit(-1);
   }
