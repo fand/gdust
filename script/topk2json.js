@@ -3,7 +3,7 @@
 var fs = require('fs');
 var USAGE = 'Usage: hoge';
 
-if (process.argv.length !== 3) {
+if (process.argv.length !== 3 && process.argv.length !== 4) {
   console.error('Wrong arguments!');
   console.error(USAGE);
   process.exit();
@@ -14,6 +14,8 @@ if (!fs.existsSync(filename)) {
   console.error('File "' + filename + '" doesn\'t exist!');
   console.error(USAGE);
 }
+
+var outfile = process.argv[3] || 'out.json';
 
 var match = function (str, regexp, dst) {
   var m = str.match(regexp);
@@ -72,7 +74,7 @@ var verify = function (opts, k) {
     results.push(counts[key]);
   }
 
-  fs.writeFile('out.json', JSON.stringify(results), 'utf8', function () {
+  fs.writeFile(outfile, JSON.stringify(results), 'utf8', function () {
     console.log('yo');
   });
 };
