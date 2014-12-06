@@ -36,15 +36,15 @@ boost::program_options::variables_map initOpt(int argc, char **argv);
 void checkDistance(int argc, char **argv);
 void cleanUp();
 
-void exp1(std::vector<std::string>);
-void exp2(std::vector<std::string>);
-void exp3(std::vector<std::string>);
-void exp4(std::vector<std::string>);
-void exp5(std::vector<std::string>);
-void exp6(std::vector<std::string>);
-void exp7(std::vector<std::string>);
-void exp8(std::vector<std::string>, int target, int k);
-void ftest(std::vector<std::string>);
+void exp1(int argc, char **argv);
+void exp2(int argc, char **argv);
+void exp3(int argc, char **argv);
+void exp4(int argc, char **argv);
+void exp5(int argc, char **argv);
+void exp6(int argc, char **argv);
+void exp7(int argc, char **argv);
+void exp8(int argc, char **argv);
+void ftest(int argc, char **argv);
 
 boost::program_options::variables_map initOpt(int argc, char **argv) {
   namespace po = boost::program_options;
@@ -76,31 +76,23 @@ main(int argc, char **argv) {
 
   // Parse options
   boost::program_options::variables_map vm = initOpt(argc, argv);
-  if (!(vm.count("file"))) {
-    std::cerr << "Please specify input files!" << std::endl;
-    return -1;
-  }
-
-  std::vector<std::string>  files = vm["file"].as< std::vector<std::string> >();
-  int k = vm["topk"].as< int >();
-  int target = vm["target"].as< int >();
 
   if (vm.count("exp")) {
     std::vector<int> exps = vm["exp"].as< std::vector<int> >();
     BOOST_FOREACH(int i,  exps) {
       switch (i) {
-      case 1: exp1(files); break;
-      case 2: exp2(files); break;
-      case 3: exp3(files); break;
-      case 4: exp4(files); break;
-      case 5: exp5(files); break;
-      case 6: exp6(files); break;
-      case 7: exp7(files); break;
-      case 8: exp8(files, target, k); break;
+      case 1: exp1(argc, argv); break;
+      case 2: exp2(argc, argv); break;
+      case 3: exp3(argc, argv); break;
+      case 4: exp4(argc, argv); break;
+      case 5: exp5(argc, argv); break;
+      case 6: exp6(argc, argv); break;
+      case 7: exp7(argc, argv); break;
+      case 8: exp8(argc, argv); break;
       }
     }
   } else if (vm.count("test")) {
-    ftest(files);
+    ftest(argc, argv);
   }
 
   cleanUp();
@@ -156,8 +148,17 @@ checkDistance(int argc, char **argv) {
 
 
 void
-exp1(std::vector<std::string> argv) {
-  TimeSeriesCollection db(argv[1].c_str() , 2, -1); // distribution is normal
+exp1(int argc, char **argv) {
+  // Parse options
+  boost::program_options::variables_map vm = initOpt(argc, argv);
+  if (!(vm.count("file"))) {
+    std::cerr << "Please specify input files!" << std::endl;
+    //return;
+    exit(-1);
+  }
+  std::vector<std::string>  files = vm["file"].as< std::vector<std::string> >();
+
+  TimeSeriesCollection db(files[1].c_str() , 2, -1); // distribution is normal
   db.normalize();
 
   DUST dust(db);
@@ -189,10 +190,18 @@ exp1(std::vector<std::string> argv) {
 }
 
 void
-exp2(std::vector<std::string> argv) {
+exp2(int argc, char **argv) {
+  // Parse options
+  boost::program_options::variables_map vm = initOpt(argc, argv);
+  if (!(vm.count("file"))) {
+    std::cerr << "Please specify input files!" << std::endl;
+    return;
+  }
+  std::vector<std::string>  files = vm["file"].as< std::vector<std::string> >();
+
   for (int t = 50; t <= 500; t += 50) {
     char filename[50];
-    snprintf(filename, 50, "%s/exp2/Gun_Point_error_3_trunk_%d", argv[1].c_str(), t);
+    snprintf(filename, 50, "%s/exp2/Gun_Point_error_3_trunk_%d", files[0].c_str(), t);
     std::cout << filename << std::endl;
 
     TimeSeriesCollection db(filename, 2, -1);
@@ -238,8 +247,16 @@ exp2(std::vector<std::string> argv) {
 }
 
 void
-exp3(std::vector<std::string> argv) {
-  TimeSeriesCollection db(argv[1].c_str(), 2, -1);
+exp3(int argc, char **argv) {
+  // Parse options
+  boost::program_options::variables_map vm = initOpt(argc, argv);
+  if (!(vm.count("file"))) {
+    std::cerr << "Please specify input files!" << std::endl;
+    return;
+  }
+  std::vector<std::string>  files = vm["file"].as< std::vector<std::string> >();
+
+  TimeSeriesCollection db(files[1].c_str(), 2, -1);
   db.normalize();
 
   DUST dust(db);
@@ -273,10 +290,18 @@ exp3(std::vector<std::string> argv) {
 
 // $ bin/gdustdtw exp/Gun_Point_error_3 exp/Gun_Point_error_7
 void
-exp4(std::vector<std::string> argv) {
-  TimeSeriesCollection db(argv[0].c_str(), 2, -1);
+exp4(int argc, char **argv) {
+  // Parse options
+  boost::program_options::variables_map vm = initOpt(argc, argv);
+  if (!(vm.count("file"))) {
+    std::cerr << "Please specify input files!" << std::endl;
+    return;
+  }
+  std::vector<std::string>  files = vm["file"].as< std::vector<std::string> >();
+
+  TimeSeriesCollection db(files[0].c_str(), 2, -1);
   db.normalize();
-  TimeSeriesCollection db2(argv[1].c_str(), 2, -1);
+  TimeSeriesCollection db2(files[1].c_str(), 2, -1);
   db2.normalize();
 
   GDUST gdust(db);
@@ -313,8 +338,16 @@ exp4(std::vector<std::string> argv) {
 // Check if DUST is working correctly with Simpson.
 //
 void
-exp5(std::vector<std::string> argv) {
-  TimeSeriesCollection db(argv[0].c_str(), 2, -1);
+exp5(int argc, char **argv) {
+  // Parse options
+  boost::program_options::variables_map vm = initOpt(argc, argv);
+  if (!(vm.count("file"))) {
+    std::cerr << "Please specify input files!" << std::endl;
+    return;
+  }
+  std::vector<std::string>  files = vm["file"].as< std::vector<std::string> >();
+
+  TimeSeriesCollection db(files[0].c_str(), 2, -1);
   db.normalize();
 
   GDUST gdust_montecarlo(db, Integrator::MonteCarlo);
@@ -339,9 +372,17 @@ exp5(std::vector<std::string> argv) {
 
 // $ bin/gdustdtw exp/Gun_Point_error_3 exp/Gun_Point_error_7
 void
-exp6(std::vector<std::string> argv) {
-  TimeSeriesCollection db(argv[0].c_str(), 2, -1);
-  TimeSeriesCollection db2(argv[1].c_str(), 2, -1);
+exp6(int argc, char **argv) {
+  // Parse options
+  boost::program_options::variables_map vm = initOpt(argc, argv);
+  if (!(vm.count("file"))) {
+    std::cerr << "Please specify input files!" << std::endl;
+    return;
+  }
+  std::vector<std::string>  files = vm["file"].as< std::vector<std::string> >();
+
+  TimeSeriesCollection db(files[0].c_str(), 2, -1);
+  TimeSeriesCollection db2(files[1].c_str(), 2, -1);
   db.normalize();
   db2.normalize();
   TimeSeries &ts = db2.sequences[0];
@@ -357,10 +398,18 @@ exp6(std::vector<std::string> argv) {
 
 // Check execution time of Simpson match
 void
-exp7(std::vector<std::string> argv) {
-  TimeSeriesCollection db(argv[0].c_str(), 2, -1);
+exp7(int argc, char **argv) {
+  // Parse options
+  boost::program_options::variables_map vm = initOpt(argc, argv);
+  if (!(vm.count("file"))) {
+    std::cerr << "Please specify input files!" << std::endl;
+    return;
+  }
+  std::vector<std::string>  files = vm["file"].as< std::vector<std::string> >();
+
+  TimeSeriesCollection db(files[0].c_str(), 2, -1);
   db.normalize();
-  TimeSeriesCollection db2(argv[1].c_str(), 2, -1);
+  TimeSeriesCollection db2(files[1].c_str(), 2, -1);
   db2.normalize();
 
   GDUST gdust(db);
@@ -376,10 +425,10 @@ exp7(std::vector<std::string> argv) {
 
   TimeSeries &ts = db2.sequences[0];
 
-  watch.start();
-  gdust.match_naive(ts);
-  watch.stop();
-  time_montecarlo_naive = watch.getInterval();
+  // watch.start();
+  // gdust.match_naive(ts);
+  // watch.stop();
+  // time_montecarlo_naive = watch.getInterval();
 
   watch.start();
   gdust.match(ts);
@@ -396,10 +445,10 @@ exp7(std::vector<std::string> argv) {
   watch.stop();
   time_simpson = watch.getInterval();
 
-  watch.start();
-  dust.match(ts);
-  watch.stop();
-  time_cpu = watch.getInterval();
+  // watch.start();
+  // dust.match(ts);
+  // watch.stop();
+  // time_cpu = watch.getInterval();
 
   std::cout << "montecarlo_naive: " << time_montecarlo_naive << std::endl;
   std::cout << "montecarlo: "       << time_montecarlo       << std::endl;
@@ -410,11 +459,21 @@ exp7(std::vector<std::string> argv) {
 
 // Check execution time of top-k
 void
-exp8(std::vector<std::string> argv, int target, int k) {
+exp8(int argc, char **argv) {
 
-  TimeSeriesCollection db(argv[0].c_str(), 2, -1);
+  boost::program_options::variables_map vm = initOpt(argc, argv);
+  if (!(vm.count("file"))) {
+    std::cerr << "Please specify input files!" << std::endl;
+    return;
+  }
+
+  std::vector<std::string>  files = vm["file"].as< std::vector<std::string> >();
+  int k = vm["topk"].as< int >();
+  int target = vm["target"].as< int >();
+
+  TimeSeriesCollection db(files[0].c_str(), 2, -1);
   db.normalize();
-  TimeSeriesCollection db2(argv[1].c_str(), 2, -1);
+  TimeSeriesCollection db2(files[1].c_str(), 2, -1);
   db2.normalize();
 
   Euclidean  eucl(db, 0);
@@ -464,8 +523,15 @@ cleanUp() {
 }
 
 
-void ftest(std::vector<std::string> argv) {
-  TimeSeriesCollection db(argv[1].c_str(), 2, -1);
+void ftest(int argc, char **argv) {
+  boost::program_options::variables_map vm = initOpt(argc, argv);
+  if (!(vm.count("file"))) {
+    std::cerr << "Please specify input files!" << std::endl;
+    return;
+  }
+  std::vector<std::string>  files = vm["file"].as< std::vector<std::string> >();
+
+  TimeSeriesCollection db(files[1].c_str(), 2, -1);
   db.normalize();
 
   TimeSeries ts = db.sequences.at(0);
