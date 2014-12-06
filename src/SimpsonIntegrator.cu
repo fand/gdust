@@ -10,6 +10,8 @@
 #include "config.hpp"
 #include "cutil.hpp"
 
+#define DIVISION 32
+
 
 SimpsonIntegrator::SimpsonIntegrator() {}
 SimpsonIntegrator::~SimpsonIntegrator() {}
@@ -107,7 +109,7 @@ SimpsonIntegrator::match(const TimeSeries &ts, const TimeSeriesCollection &tsc) 
                                         dusts_D,
                                         ts_length,
                                         ts_num,
-                                        1024);
+                                        DIVISION);
 
   int i_min;
   float DUST_min;

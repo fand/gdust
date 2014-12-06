@@ -321,11 +321,13 @@ g_dust_simpson_kernel(float *tuple,
   __shared__ float sdata2[TPB];
   __shared__ float sdata3[TPB];
 
-  float width = RANGE_WIDTH / static_cast<float>(division);
+  // width = division /
+  int division_all = division * RANGE_WIDTH;
+  float width = 1.0f / static_cast<float>(division);
 
   // MAP PHASE
   // put (f1, f2, f3) into (o1, o2, o3) for all samples
-  for (int i = threadIdx.x; i < division; i += blockDim.x) {
+  for (int i = threadIdx.x; i < division_all; i += blockDim.x) {
     float window_left = width * i + RANGE_MIN;
     o1 += simpson_f1(window_left, width, tuple);
     o2 += simpson_f2(window_left, width, tuple);
@@ -535,12 +537,14 @@ g_match_simpson(float *ts_GPU,
   float *tsc = &tsc_GPU[ts_num * time * 3];  // TimeSeriesCollection for this block
   float *x  = &ts_GPU[time * 3];             // TODO: compute f1 only once.
 
-  float width = static_cast<float>(RANGE_WIDTH) / division;
+  // width = division /
+  int division_all = division * RANGE_WIDTH;
+  float width = 1.0f / static_cast<float>(division);
 
   for (int i = 0; i < ts_num; i++) {
     float *y = &tsc[i * 3];
     o1 = o2 = o3 = 0.0f;
-    for (int j = threadIdx.x; j < division; j += blockDim.x) {
+    for (int j = threadIdx.x; j < division_all; j += blockDim.x) {
       float window_left = width * i + RANGE_MIN;
       o1 += simpson_f12_multi(window_left, width, x);
       o2 += simpson_f12_multi(window_left, width, y);

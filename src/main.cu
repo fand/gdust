@@ -408,7 +408,7 @@ exp7(std::vector<std::string> argv) {
   std::cout << "cpu  : "            << time_cpu              << std::endl;
 }
 
-// Check execution time of Simpson match
+// Check execution time of top-k
 void
 exp8(std::vector<std::string> argv, int target, int k) {
 
