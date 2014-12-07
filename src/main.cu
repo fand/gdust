@@ -406,6 +406,8 @@ exp7(int argc, char **argv) {
     return;
   }
   std::vector<std::string>  files = vm["file"].as< std::vector<std::string> >();
+  int target = vm["target"].as< int >();
+
 
   TimeSeriesCollection db(files[0].c_str(), 2, -1);
   db.normalize();
@@ -423,34 +425,43 @@ exp7(int argc, char **argv) {
   double time_simpson = 0;
   double time_cpu = 0;
 
-  TimeSeries &ts = db2.sequences[0];
+  if (target < 0 || db2.sequences.size() < target) {
+    std::cout << "Invalid index! : " << target << std::endl;
+    exit(-1);
+  }
+  std::cout << "################ ts : " << target << std::endl;
+  TimeSeries &ts = db2.sequences[target];
 
   // watch.start();
   // gdust.match_naive(ts);
   // watch.stop();
   // time_montecarlo_naive = watch.getInterval();
 
+  std::cout << "montecarlo: " << std::endl;
   watch.start();
   gdust.match(ts);
   watch.stop();
   time_montecarlo = watch.getInterval();
 
+  std::cout << "simpson_naive: " << std::endl;
   watch.start();
   gdust_simpson.match_naive(ts);
   watch.stop();
   time_simpson_naive = watch.getInterval();
 
+  std::cout << "simpson: " << std::endl;
   watch.start();
   gdust_simpson.match(ts);
   watch.stop();
   time_simpson = watch.getInterval();
 
-  // watch.start();
-  // dust.match(ts);
-  // watch.stop();
-  // time_cpu = watch.getInterval();
+  std::cout << "cpu: " << std::endl;
+  watch.start();
+  dust.match(ts);
+  watch.stop();
+  time_cpu = watch.getInterval();
 
-  std::cout << "montecarlo_naive: " << time_montecarlo_naive << std::endl;
+  // std::cout << "montecarlo_naive: " << time_montecarlo_naive << std::endl;
   std::cout << "montecarlo: "       << time_montecarlo       << std::endl;
   std::cout << "simpson_naive: "    << time_simpson_naive    << std::endl;
   std::cout << "simpson: "          << time_simpson          << std::endl;
