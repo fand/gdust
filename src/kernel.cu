@@ -545,7 +545,7 @@ g_match_simpson(float *ts_GPU,
     float *y = &tsc[i * 3];
     o1 = o2 = o3 = 0.0f;
     for (int j = threadIdx.x; j < division_all; j += blockDim.x) {
-      float window_left = width * i + RANGE_MIN;
+      float window_left = width * j + RANGE_MIN;
       o1 += simpson_f12_multi(window_left, width, x);
       o2 += simpson_f12_multi(window_left, width, y);
       o3 += simpson_f3_multi(window_left, width, x, y);

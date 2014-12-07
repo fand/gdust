@@ -66,6 +66,7 @@ void Integrator::finish_match(int *i_min, float *DUST_min) {
     }
 
     float DUST = sqrt(dist);
+
     if (DUST < *DUST_min || i == 0) {
       *DUST_min = DUST;
       *i_min = i;
