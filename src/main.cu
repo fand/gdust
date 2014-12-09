@@ -549,39 +549,37 @@ exp9(int argc, char **argv) {
   GDUST gdust_montecarlo(db, Integrator::MonteCarlo);
   GDUST gdust_simpson(db, Integrator::Simpson);
 
-  TimeSeries &ts1 = db.sequences[targets[0]];
-  TimeSeries &ts2 = db.sequences[targets[1]];
-
-  double d_montecarlo, d_simpson, d_cpu;
-
   Watch watch;
   double time_montecarlo = 0;
   double time_simpson = 0;
   double time_cpu = 0;
 
-  watch.start();
-  d_montecarlo = gdust_montecarlo.distance(ts1, ts2);
-  watch.stop();
-  time_montecarlo = watch.getInterval();
+  int i = targets[0];
+  int j = targets[1];
+
+  TimeSeries &ts1 = db.sequences[i];
+  TimeSeries &ts2 = db.sequences[j];
 
   watch.start();
-  d_simpson = gdust_simpson.distance(ts1, ts2);
+  gdust_montecarlo.distance(ts1, ts2);
   watch.stop();
-  time_simpson = watch.getInterval();
+  time_montecarlo += watch.getInterval();
 
   watch.start();
-  d_cpu = dust.distance(ts1, ts2);
+  gdust_simpson.distance(ts1, ts2);
   watch.stop();
-  time_cpu = watch.getInterval();
+  time_simpson += watch.getInterval();
 
-  std::cout << "#######################" << std::endl;
-  std::cout << "i: " << targets[0] << ", j: " << targets[1] << std::endl;
-  std::cout << "\tdist:MonteCarlo: \t" << d_montecarlo << std::endl;
-  std::cout << "\tdist:Simpson: \t" << d_simpson << std::endl;
-  std::cout << "\tdist:CPU: \t" << d_cpu << std::endl;
-  std::cout << "MonteCarlo: \t" << time_montecarlo << std::endl;
-  std::cout << "Simpson: \t" << time_simpson << std::endl;
-  std::cout << "CPU: \t" << time_cpu << std::endl;
+  watch.start();
+  dust.distance(ts1, ts2);
+  watch.stop();
+  time_cpu += watch.getInterval();
+
+  std::cout << "{" << std::endl;
+  std::cout << "\"MonteCarlo\": " << time_montecarlo << std::endl;
+  std::cout << ", \"Simpson\": "    << time_simpson    << std::endl;
+  std::cout << ", \"CPU\": "        << time_cpu        << std::endl;
+  std::cout << "}" << std::endl;
 }
 
 void

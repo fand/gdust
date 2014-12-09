@@ -5,14 +5,21 @@ var fs = require('fs');
 var sysPath = require('path');
 var exec = require('child_process').exec;
 var file = process.argv[2];
+var limit = +process.argv[3];
+
+if (process.argv.length !== 4) {
+  console.log('wrong arguments');
+  process.exit();
+}
 
 var Cooler = require('./Cooler');
 
 var used = {};
+var results = {};
 
 var exp = function (num) {
-  if (num === 100) {
-    console.log('END');
+  if (num === limit) {
+    finish();
     return;
   }
 
@@ -29,12 +36,25 @@ var exp = function (num) {
 
   exec(cmd, function (err, stdout, stderr) {
     if (err) { throw err; }
+
+    // Parse results
+    var result = JSON.parse(stdout);
+    for (var k in result) {
+      if (results[k] == null) results[k] = 0;
+      results[k] += result[k];
+    }
+    console.log('############################ num: ', num);
     console.log(stdout);
 
     Cooler(function () {
       exp(num + 1);
     });
   });
+};
+
+var finish = function () {
+  console.log(JSON.stringify(results));
+  console.log('END');
 };
 
 
