@@ -51,7 +51,7 @@ SimpsonIntegrator::distance(const TimeSeries &ts1, const TimeSeries &ts2, int ts
                              cudaMemcpyHostToDevice));
 
   // call kernel
-  g_distance_simpson_kernel<<< ts_length, TPB >>>(tuples_GPU, dusts_GPU, 49152);
+  g_distance_simpson_kernel<<< ts_length, TPB >>>(tuples_GPU, dusts_GPU, DIVISION);
 
   checkCudaErrors(cudaMemcpy(dusts,
                              dusts_GPU,
