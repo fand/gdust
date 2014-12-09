@@ -44,6 +44,7 @@ void exp5(int argc, char **argv);
 void exp6(int argc, char **argv);
 void exp7(int argc, char **argv);
 void exp8(int argc, char **argv);
+void exp9(int argc, char **argv);
 void ftest(int argc, char **argv);
 
 boost::program_options::variables_map initOpt(int argc, char **argv) {
@@ -53,6 +54,7 @@ boost::program_options::variables_map initOpt(int argc, char **argv) {
   po::options_description visible("Allowed options");
   generic.add_options()("exp", po::value< std::vector<int> >(), "exp number to run")("test", "run tests");
   generic.add_options()("target", po::value< int >(), "index of target timeseries")("test", "run tests");
+  generic.add_options()("targets", po::value< std::vector<int> >(), "index of target timeseries")("test", "run tests");
   generic.add_options()("topk,k", po::value< int >(), "top k number")("test", "run tests");
   hidden.add_options()("file", po::value< std::vector<std::string> >(), "input file");
   visible.add(generic).add(hidden);
@@ -89,6 +91,7 @@ main(int argc, char **argv) {
       case 6: exp6(argc, argv); break;
       case 7: exp7(argc, argv); break;
       case 8: exp8(argc, argv); break;
+      case 9: exp9(argc, argv); break;
       }
     }
   } else if (vm.count("test")) {
@@ -523,6 +526,62 @@ exp8(int argc, char **argv) {
   std::cout << "gdust_simpson: ";
   for (int j = 0; j < k; j++) { std::cout << top_gdust_simpson[j] << ", "; }
   std::cout << std::endl;
+}
+
+//!
+// Eval performances of DUST between 2 series.
+//
+void
+exp9(int argc, char **argv) {
+  // Parse options
+  boost::program_options::variables_map vm = initOpt(argc, argv);
+  if (!(vm.count("file"))) {
+    std::cerr << "Please specify input files!" << std::endl;
+    return;
+  }
+  std::vector<std::string> files = vm["file"].as< std::vector<std::string> >();
+  std::vector<int> targets = vm["targets"].as< std::vector<int> >();
+
+  TimeSeriesCollection db(files[0].c_str(), 2, -1);
+  db.normalize();
+
+  DUST dust(db);
+  GDUST gdust_montecarlo(db, Integrator::MonteCarlo);
+  GDUST gdust_simpson(db, Integrator::Simpson);
+
+  TimeSeries &ts1 = db.sequences[targets[0]];
+  TimeSeries &ts2 = db.sequences[targets[1]];
+
+  double d_montecarlo, d_simpson, d_cpu;
+
+  Watch watch;
+  double time_montecarlo = 0;
+  double time_simpson = 0;
+  double time_cpu = 0;
+
+  watch.start();
+  d_montecarlo = gdust_montecarlo.distance(ts1, ts2);
+  watch.stop();
+  time_montecarlo = watch.getInterval();
+
+  watch.start();
+  d_simpson = gdust_simpson.distance(ts1, ts2);
+  watch.stop();
+  time_simpson = watch.getInterval();
+
+  watch.start();
+  d_cpu = dust.distance(ts1, ts2);
+  watch.stop();
+  time_cpu = watch.getInterval();
+
+  std::cout << "#######################" << std::endl;
+  std::cout << "i: " << targets[0] << ", j: " << targets[1] << std::endl;
+  std::cout << "\tdist:MonteCarlo: \t" << d_montecarlo << std::endl;
+  std::cout << "\tdist:Simpson: \t" << d_simpson << std::endl;
+  std::cout << "\tdist:CPU: \t" << d_cpu << std::endl;
+  std::cout << "MonteCarlo: \t" << time_montecarlo << std::endl;
+  std::cout << "Simpson: \t" << time_simpson << std::endl;
+  std::cout << "CPU: \t" << time_cpu << std::endl;
 }
 
 void
