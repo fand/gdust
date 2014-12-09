@@ -45,6 +45,7 @@ void exp6(int argc, char **argv);
 void exp7(int argc, char **argv);
 void exp8(int argc, char **argv);
 void exp9(int argc, char **argv);
+void exp10(int argc, char **argv);
 void ftest(int argc, char **argv);
 
 boost::program_options::variables_map initOpt(int argc, char **argv) {
@@ -92,6 +93,7 @@ main(int argc, char **argv) {
       case 7: exp7(argc, argv); break;
       case 8: exp8(argc, argv); break;
       case 9: exp9(argc, argv); break;
+      case 10: exp10(argc, argv); break;
       }
     }
   } else if (vm.count("test")) {
@@ -627,8 +629,8 @@ exp10(int argc, char **argv) {
   time_cpu += watch.getInterval();
 
   //std::cout << "montecarlo: "       << time_montecarlo       << std::endl;
-  std::cout << "simpson: "          << time_simpson          << std::endl;
-  std::cout << "cpu  : "            << time_cpu              << std::endl;
+  std::cout << "#simpson#" << time_simpson << "#" << std::endl;
+  std::cout << "#cpu#" << time_cpu     << "#" << std::endl;
 }
 
 void
