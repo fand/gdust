@@ -437,17 +437,17 @@ exp7(int argc, char **argv) {
   // watch.stop();
   // time_montecarlo_naive = watch.getInterval();
 
-  std::cout << "montecarlo: " << std::endl;
-  watch.start();
-  gdust.match(ts);
-  watch.stop();
-  time_montecarlo = watch.getInterval();
+  // std::cout << "montecarlo: " << std::endl;
+  // watch.start();
+  // gdust.match(ts);
+  // watch.stop();
+  // time_montecarlo = watch.getInterval();
 
-  std::cout << "simpson_naive: " << std::endl;
-  watch.start();
-  gdust_simpson.match_naive(ts);
-  watch.stop();
-  time_simpson_naive = watch.getInterval();
+  // std::cout << "simpson_naive: " << std::endl;
+  // watch.start();
+  // gdust_simpson.match_naive(ts);
+  // watch.stop();
+  // time_simpson_naive = watch.getInterval();
 
   std::cout << "simpson: " << std::endl;
   watch.start();
