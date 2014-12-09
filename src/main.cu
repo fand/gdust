@@ -582,6 +582,55 @@ exp9(int argc, char **argv) {
   std::cout << "}" << std::endl;
 }
 
+//!
+// Eval performances while changing db size.
+//
+void
+exp10(int argc, char **argv) {
+  // Parse options
+  boost::program_options::variables_map vm = initOpt(argc, argv);
+  if (!(vm.count("file"))) {
+    std::cerr << "Please specify input files!" << std::endl;
+    return;
+  }
+  std::vector<std::string> files = vm["file"].as< std::vector<std::string> >();
+  int target = vm["target"].as< int >();
+  int k = vm["topk"].as< int >();
+
+  TimeSeriesCollection db(files[0].c_str(), 2, k);
+  db.normalize();
+
+  DUST dust(db);
+  GDUST gdust_montecarlo(db, Integrator::MonteCarlo);
+  GDUST gdust_simpson(db, Integrator::Simpson);
+
+  Watch watch;
+  double time_montecarlo = 0;
+  double time_simpson = 0;
+  double time_cpu = 0;
+
+  TimeSeries &ts = db.sequences[target];
+
+  // watch.start();
+  // gdust_montecarlo.match(ts)
+  // watch.stop();
+  // time_montecarlo += watch.getInterval();
+
+  watch.start();
+  gdust_simpson.match(ts);
+  watch.stop();
+  time_simpson += watch.getInterval();
+
+  watch.start();
+  dust.match(ts);
+  watch.stop();
+  time_cpu += watch.getInterval();
+
+  //std::cout << "montecarlo: "       << time_montecarlo       << std::endl;
+  std::cout << "simpson: "          << time_simpson          << std::endl;
+  std::cout << "cpu  : "            << time_cpu              << std::endl;
+}
+
 void
 cleanUp() {
   SAFE_FREE(o.rfileCollection);
