@@ -14,25 +14,19 @@ if (process.argv.length !== 4) {
 
 var Cooler = require('./Cooler');
 
-var used = {};
 var results = {};
 
 console.log('limit: ', limit);
 var exp = function (num) {
-  console.log(num);
-  if (num === limit) {
+
+  if (num > limit) {
     finish();
     return;
   }
+  console.log('############################ num: ', num);
 
-  var i = Math.random() * 200 | 0;
-  while (used[i]) {
-    i = Math.random() * 200 | 0;
-  }
-  used[i] = true;
-
+  var i = Math.random() * num | 0;
   var cmd = "bin/gdustdtw --exp 10 " + file + ' --target ' + i + ' --topk ' + num;
-
   exec(cmd, function (err, stdout, stderr) {
     if (err) { throw err; }
 
@@ -45,15 +39,15 @@ var exp = function (num) {
       if (simpson) result.simpson = simpson[1];
       if (cpu) result.cpu = cpu[1];
     });
-    console.log('<<<<<<<<<<<<<<<<<<<<<<<<<<');
-    console.log(result);
+    // console.log('<<<<<<<<<<<<<<<<<<<<<<<<<<');
+    // console.log(result);
 
     for (var k in result) {
       if (results[k] == null) results[k] = 0;
-      results[k] += result[k];
+      results[k] += +result[k];
     }
-    console.log('############################ num: ', num);
-    console.log(stdout);
+
+    // console.log(stdout);
 
     Cooler(function () {
       exp(num + 1);
@@ -62,10 +56,13 @@ var exp = function (num) {
 };
 
 var finish = function () {
+  console.log('#######################################');
+  console.log('############### FINISH ################');
+  console.log('#######################################');
   console.log(JSON.stringify(results));
   console.log('END');
 };
 
 
 // DO IT!
-exp(0);
+exp(1);

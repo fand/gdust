@@ -601,7 +601,7 @@ exp10(int argc, char **argv) {
 
   TimeSeriesCollection db(files[0].c_str(), 2, k);
   db.normalize();
-
+  std::cout << "db size: " << db.sequences.size() << std::endl;
   DUST dust(db);
   GDUST gdust_montecarlo(db, Integrator::MonteCarlo);
   GDUST gdust_simpson(db, Integrator::Simpson);
