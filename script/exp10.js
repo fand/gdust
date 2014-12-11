@@ -14,7 +14,8 @@ if (process.argv.length !== 4) {
 
 var Cooler = require('./Cooler');
 
-var results = {};
+//var results = {};
+var results = [];
 
 console.log('limit: ', limit);
 var exp = function (num) {
@@ -39,15 +40,14 @@ var exp = function (num) {
       if (simpson) result.simpson = simpson[1];
       if (cpu) result.cpu = cpu[1];
     });
-    // console.log('<<<<<<<<<<<<<<<<<<<<<<<<<<');
-    // console.log(result);
 
-    for (var k in result) {
-      if (results[k] == null) results[k] = 0;
-      results[k] += +result[k];
-    }
+    results.push(result);
+    // for (var k in result) {
+    //   if (results[k] == null) results[k] = 0;
+    //   results[k] += +result[k];
+    // }
 
-    // console.log(stdout);
+     console.log(stdout);
 
     Cooler(function () {
       exp(num + 1);
