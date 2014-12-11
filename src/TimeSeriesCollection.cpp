@@ -26,12 +26,12 @@ TimeSeriesCollection::readFile(const char *path, int distribution, int limitN) {
 
   std::string line;
   while (getline(fin, line)) {
-    sequences.push_back(TimeSeries(line, distribution));
-    sequences[sequences.size() - 1].setId(sequences.size());
-
     if (limitN != -1 && static_cast<int>(sequences.size()) == limitN) {
       break;
     }
+
+    sequences.push_back(TimeSeries(line, distribution));
+    sequences[sequences.size() - 1].setId(sequences.size());
   }
 
   std::cerr << "Read " << sequences.size()

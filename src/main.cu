@@ -45,6 +45,7 @@ void exp6(int argc, char **argv);
 void exp7(int argc, char **argv);
 void exp8(int argc, char **argv);
 void exp9(int argc, char **argv);
+void exp10(int argc, char **argv);
 void ftest(int argc, char **argv);
 
 boost::program_options::variables_map initOpt(int argc, char **argv) {
@@ -92,6 +93,7 @@ main(int argc, char **argv) {
       case 7: exp7(argc, argv); break;
       case 8: exp8(argc, argv); break;
       case 9: exp9(argc, argv); break;
+      case 10: exp10(argc, argv); break;
       }
     }
   } else if (vm.count("test")) {
@@ -580,6 +582,55 @@ exp9(int argc, char **argv) {
   std::cout << ", \"Simpson\": "    << time_simpson    << std::endl;
   std::cout << ", \"CPU\": "        << time_cpu        << std::endl;
   std::cout << "}" << std::endl;
+}
+
+//!
+// Eval performances while changing db size.
+//
+void
+exp10(int argc, char **argv) {
+  // Parse options
+  boost::program_options::variables_map vm = initOpt(argc, argv);
+  if (!(vm.count("file"))) {
+    std::cerr << "Please specify input files!" << std::endl;
+    return;
+  }
+  std::vector<std::string> files = vm["file"].as< std::vector<std::string> >();
+  int target = vm["target"].as< int >();
+  int k = vm["topk"].as< int >();
+
+  TimeSeriesCollection db(files[0].c_str(), 2, k);
+  db.normalize();
+  std::cout << "db size: " << db.sequences.size() << std::endl;
+  DUST dust(db);
+  GDUST gdust_montecarlo(db, Integrator::MonteCarlo);
+  GDUST gdust_simpson(db, Integrator::Simpson);
+
+  Watch watch;
+  double time_montecarlo = 0;
+  double time_simpson = 0;
+  double time_cpu = 0;
+
+  TimeSeries &ts = db.sequences[target];
+
+  // watch.start();
+  // gdust_montecarlo.match(ts)
+  // watch.stop();
+  // time_montecarlo += watch.getInterval();
+
+  watch.start();
+  gdust_simpson.match(ts);
+  watch.stop();
+  time_simpson += watch.getInterval();
+
+  watch.start();
+  dust.match(ts);
+  watch.stop();
+  time_cpu += watch.getInterval();
+
+  //std::cout << "montecarlo: "       << time_montecarlo       << std::endl;
+  std::cout << "#simpson#" << time_simpson << "#" << std::endl;
+  std::cout << "#cpu#" << time_cpu     << "#" << std::endl;
 }
 
 void
