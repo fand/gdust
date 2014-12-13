@@ -35,8 +35,10 @@ var exp = function (num) {
     var str = stdout.split(/\r|\n|\r\n/);
     var result = {};
     str.forEach(function (line) {
+      var montecarlo = stdout.match(/#montecarlo#(.*)#/);
       var simpson = stdout.match(/#simpson#(.*)#/);
       var cpu = stdout.match(/#cpu#(.*)#/);
+      if (montecarlo) result.montecarlo = montecarlo[1];
       if (simpson) result.simpson = simpson[1];
       if (cpu) result.cpu = cpu[1];
     });
