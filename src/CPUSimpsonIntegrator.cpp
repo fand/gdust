@@ -24,6 +24,7 @@ double
 CPUSimpsonIntegrator::distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) {
   double dist = 0.0;
 
+  #pragma omp parallel for reduction(+: dist)
   for (int i = 0; i < n; ++i) {
     RandomVariable x = ts1.at(i);
     RandomVariable y = ts2.at(i);
@@ -48,6 +49,7 @@ CPUSimpsonIntegrator::dust_kernel(double *xy, int time) {
   double int1, int2, int3;
   int1 = int2 = int3 = 0.0;
 
+  //#pragma omp parallel for  // <- 逆に遅くなる
   for (int i = 0; i < division_all; i++) {
     double window_left = width * i + RANGE_MIN;
     int1 += this->f1(window_left, width, xy);
