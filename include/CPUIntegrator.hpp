@@ -31,9 +31,15 @@ class CPUMonteCarloIntegrator : public CPUIntegrator {
   const gsl_rng_type *T;
 };
 
-// class CPUSimpsonIntegrator : public CPUIntegrator {
-//  public:
-//   CPUSimpsonIntegrator();
-//   ~CPUSimpsonIntegrator();
-//   float distance(const TimeSeries &ts1, const TimeSeries &ts2, int ts_length);
-// };
+class CPUSimpsonIntegrator : public CPUIntegrator {
+ public:
+  CPUSimpsonIntegrator();
+  ~CPUSimpsonIntegrator();
+  double distance(const TimeSeries &ts1, const TimeSeries &ts2, int ts_length);
+
+ private:
+  double dust_kernel(double *xy, int time);
+  double f1(double left, double width, double *tuple);
+  double f2(double left, double width, double *tuple);
+  double f3(double left, double width, double *tuple);
+};
