@@ -45,6 +45,7 @@ var exp = function (num) {
     }
     console.log('############################ num: ', num);
     console.log(stdout);
+    console.error(stderr);
 
     Cooler(function () {
       exp(num + 1);
