@@ -548,6 +548,7 @@ exp9(int argc, char **argv) {
   db.normalize();
 
   DUST dust(db);
+  DUST dust_simpson(db, CPUIntegrator::Simpson);
   GDUST gdust_montecarlo(db, Integrator::MonteCarlo);
   GDUST gdust_simpson(db, Integrator::Simpson);
 
@@ -555,6 +556,9 @@ exp9(int argc, char **argv) {
   double time_montecarlo = 0;
   double time_simpson = 0;
   double time_cpu = 0;
+  double time_cpu_simpson = 0;
+
+  double dgm, dgs, dcm, dcs;
 
   int i = targets[0];
   int j = targets[1];
@@ -563,24 +567,42 @@ exp9(int argc, char **argv) {
   TimeSeries &ts2 = db.sequences[j];
 
   watch.start();
-  gdust_montecarlo.distance(ts1, ts2);
+  dgm = gdust_montecarlo.distance(ts1, ts2);
   watch.stop();
   time_montecarlo += watch.getInterval();
 
   watch.start();
-  gdust_simpson.distance(ts1, ts2);
+  dgs = gdust_simpson.distance(ts1, ts2);
   watch.stop();
   time_simpson += watch.getInterval();
 
   watch.start();
-  dust.distance(ts1, ts2);
+  dcm = dust.distance(ts1, ts2);
   watch.stop();
   time_cpu += watch.getInterval();
 
+  watch.start();
+  dcs = dust_simpson.distance(ts1, ts2);
+  watch.stop();
+  time_cpu_simpson += watch.getInterval();
+
   std::cout << "{" << std::endl;
-  std::cout << "\"MonteCarlo\": " << time_montecarlo << std::endl;
-  std::cout << ", \"Simpson\": "    << time_simpson    << std::endl;
-  std::cout << ", \"CPU\": "        << time_cpu        << std::endl;
+  // DEBUG
+  if (1) {
+    std::cout << "\"distance\": {" << std::endl;
+    std::cout << "\"MonteCarlo\": " << dgm << std::endl;
+    std::cout << ", \"Simpson\": "  << dgs << std::endl;
+    std::cout << ", \"CPU\": "      << dcm << std::endl;
+    std::cout << ", \"CPU Simp\": " << dcs << std::endl;
+    std::cout << "}," << std::endl;
+  }
+
+  std::cout << "\"result\": {" << std::endl;
+  std::cout << "\"MonteCarlo\": " << time_montecarlo  << std::endl;
+  std::cout << ", \"Simpson\": "  << time_simpson     << std::endl;
+  std::cout << ", \"CPU\": "      << time_cpu         << std::endl;
+  std::cout << ", \"CPU Simp\": " << time_cpu_simpson << std::endl;
+  std::cout << "}" << std::endl;
   std::cout << "}" << std::endl;
 }
 
@@ -603,6 +625,7 @@ exp10(int argc, char **argv) {
   db.normalize();
   std::cout << "db size: " << db.sequences.size() << std::endl;
   DUST dust(db);
+  DUST dust_simpson(db, CPUIntegrator::Simpson);
   GDUST gdust_montecarlo(db, Integrator::MonteCarlo);
   GDUST gdust_simpson(db, Integrator::Simpson);
 
@@ -610,27 +633,34 @@ exp10(int argc, char **argv) {
   double time_montecarlo = 0;
   double time_simpson = 0;
   double time_cpu = 0;
+  double time_cpu_simpson = 0;
 
   TimeSeries &ts = db.sequences[target];
 
-  // watch.start();
-  // gdust_montecarlo.match(ts)
-  // watch.stop();
-  // time_montecarlo += watch.getInterval();
-
   watch.start();
-  gdust_simpson.match(ts);
+  gdust_montecarlo.match(ts);
   watch.stop();
-  time_simpson += watch.getInterval();
+  time_montecarlo += watch.getInterval();
+
+  // watch.start();
+  // gdust_simpson.match(ts);
+  // watch.stop();
+  // time_simpson += watch.getInterval();
 
   watch.start();
   dust.match(ts);
   watch.stop();
   time_cpu += watch.getInterval();
 
-  //std::cout << "montecarlo: "       << time_montecarlo       << std::endl;
-  std::cout << "#simpson#" << time_simpson << "#" << std::endl;
+  watch.start();
+  dust_simpson.match(ts);
+  watch.stop();
+  time_cpu_simpson += watch.getInterval();
+
+  std::cout << "#montecarlo#"       << time_montecarlo <<     "#"   << std::endl;
+  //std::cout << "#simpson#" << time_simpson << "#" << std::endl;
   std::cout << "#cpu#" << time_cpu     << "#" << std::endl;
+  std::cout << "#cpu_simpson#" << time_cpu_simpson     << "#" << std::endl;
 }
 
 void

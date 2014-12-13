@@ -11,7 +11,8 @@
 // PDF functions
 // __________________
 
-inline double
+//inline double
+double
 c_pdf_uniform(double lower, double upper, double x) {
   if ((x < lower) || (x > upper)) {
     return 0.0;
@@ -22,7 +23,8 @@ c_pdf_uniform(double lower, double upper, double x) {
   return 1.0 / (upper - lower);
 }
 
-inline double
+//inline double
+double
 c_pdf_normal(double mean, double sd, double x) {
   if (isinf(x) || sd <= 0 || isinf(sd) || isinf(mean)) {
     return 0.0;
@@ -40,7 +42,8 @@ c_pdf_normal(double mean, double sd, double x) {
   return result;
 }
 
-inline double
+//inline double
+double
 c_myPDF(int distribution, double mean, double stddev, double v) {
   double ret = -1.0f;
   if (stddev == 0.0f) stddev = 0.2f;
@@ -65,7 +68,8 @@ c_myPDF(int distribution, double mean, double stddev, double v) {
 //
 // @param {float}   v  - Random value
 // @param {float[]} xy - An array containing x & y
-inline double
+//inline double
+double
 c_f1(double v, double *xy) {
   double p1 = c_myPDF(xy[ TUPLE_X_DISTRIBUTION ],     // distribution
                       0.0,                            // mean
@@ -81,7 +85,8 @@ c_f1(double v, double *xy) {
 // Calculate p(y|r(y)=v)p(r(y)=v).
 // Almost same as c_f1.
 //
-inline double
+//inline double
+double
 c_f2(double v, double *xy) {
   double p1 = c_myPDF(xy[ TUPLE_Y_DISTRIBUTION ],       // distribution
                       0.0,                              // mean
@@ -99,7 +104,8 @@ c_f2(double v, double *xy) {
 // @param {float}   z  - Random value
 // @param {float[]} xy - An array containing x & y
 //
-inline double
+//inline double
+double
 c_f3(double z, double *xy) {
   int    x_dist   = static_cast<int>(xy[ TUPLE_X_DISTRIBUTION ]);
   double x        = xy[ TUPLE_X_OBSERVATION ] - 0.1;

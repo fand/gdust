@@ -2,20 +2,17 @@
 
 #include <vector>
 #include <map>
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_monte.h>
-#include <gsl/gsl_monte_plain.h>
-#include <gsl/gsl_monte_miser.h>
-#include <gsl/gsl_monte_vegas.h>
 #include "Distance.hpp"
 #include "TimeSeries.hpp"
 #include "TimeSeriesCollection.hpp"
 #include "RandomVariable.hpp"
+#include "CPUIntegrator.hpp"
 
 
 class DUST : public Distance {
  public:
-  explicit DUST(const TimeSeriesCollection &collection);
+  explicit DUST(const TimeSeriesCollection &collection,
+                const CPUIntegrator::Method method = CPUIntegrator::MonteCarlo);
   ~DUST();
 
   double difference(const RandomVariable &r1, const RandomVariable &r2);
@@ -24,9 +21,6 @@ class DUST : public Distance {
   double dust(const RandomVariable &x, const RandomVariable &y);
 
  private:
-  double distance_inner(const TimeSeries &ts1, const TimeSeries &ts2, int n);
+  CPUIntegrator *integrator;
   double phi(const RandomVariable &x, const RandomVariable &y);
-
-  gsl_rng *r_rng;
-  const gsl_rng_type *T;
 };

@@ -38,13 +38,14 @@ var exp = function (num) {
     if (err) { throw err; }
 
     // Parse results
-    var result = JSON.parse(stdout);
+    var result = JSON.parse(stdout).result;
     for (var k in result) {
       if (results[k] == null) results[k] = 0;
       results[k] += result[k];
     }
     console.log('############################ num: ', num);
     console.log(stdout);
+    console.error(stderr);
 
     Cooler(function () {
       exp(num + 1);
