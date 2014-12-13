@@ -613,23 +613,23 @@ exp10(int argc, char **argv) {
 
   TimeSeries &ts = db.sequences[target];
 
-  // watch.start();
-  // gdust_montecarlo.match(ts)
-  // watch.stop();
-  // time_montecarlo += watch.getInterval();
-
   watch.start();
-  gdust_simpson.match(ts);
+  gdust_montecarlo.match(ts);
   watch.stop();
-  time_simpson += watch.getInterval();
+  time_montecarlo += watch.getInterval();
+
+  // watch.start();
+  // gdust_simpson.match(ts);
+  // watch.stop();
+  // time_simpson += watch.getInterval();
 
   watch.start();
   dust.match(ts);
   watch.stop();
   time_cpu += watch.getInterval();
 
-  //std::cout << "montecarlo: "       << time_montecarlo       << std::endl;
-  std::cout << "#simpson#" << time_simpson << "#" << std::endl;
+  std::cout << "#montecarlo#"       << time_montecarlo <<     "#"   << std::endl;
+  //std::cout << "#simpson#" << time_simpson << "#" << std::endl;
   std::cout << "#cpu#" << time_cpu     << "#" << std::endl;
 }
 
