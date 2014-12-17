@@ -38,9 +38,11 @@ var exp = function (num) {
       var montecarlo = stdout.match(/#montecarlo#(.*)#/);
       var simpson = stdout.match(/#simpson#(.*)#/);
       var cpu = stdout.match(/#cpu#(.*)#/);
+      var cpu_simpson = stdout.match(/#cpu_simpson#(.*)#/);
       if (montecarlo) result.montecarlo = montecarlo[1];
       if (simpson) result.simpson = simpson[1];
       if (cpu) result.cpu = cpu[1];
+      if (cpu_simpson) result.cpu_simpson = cpu_simpson[1];
     });
 
     results.push(result);

@@ -588,7 +588,7 @@ exp9(int argc, char **argv) {
 
   std::cout << "{" << std::endl;
   // DEBUG
-  if (1) {
+  if (0) {
     std::cout << "\"distance\": {" << std::endl;
     std::cout << "\"MonteCarlo\": " << dgm << std::endl;
     std::cout << ", \"Simpson\": "  << dgs << std::endl;
@@ -598,10 +598,10 @@ exp9(int argc, char **argv) {
   }
 
   std::cout << "\"result\": {" << std::endl;
-  std::cout << "\"MonteCarlo\": " << time_montecarlo  << std::endl;
-  std::cout << ", \"Simpson\": "  << time_simpson     << std::endl;
-  std::cout << ", \"CPU\": "      << time_cpu         << std::endl;
-  std::cout << ", \"CPU Simp\": " << time_cpu_simpson << std::endl;
+  std::cout << "\"MonteCarlo\": " << time_montecarlo  << "," << std::endl;
+  std::cout << "\"Simpson\": "  << time_simpson     << "," << std::endl;
+  std::cout << "\"CPU\": "      << time_cpu         << "," << std::endl;
+  std::cout << "\"CPU Simp\": " << time_cpu_simpson << std::endl;
   std::cout << "}" << std::endl;
   std::cout << "}" << std::endl;
 }
@@ -637,29 +637,29 @@ exp10(int argc, char **argv) {
 
   TimeSeries &ts = db.sequences[target];
 
-  watch.start();
-  gdust_montecarlo.match(ts);
-  watch.stop();
-  time_montecarlo += watch.getInterval();
+  // watch.start();
+  // gdust_montecarlo.match(ts);
+  // watch.stop();
+  // time_montecarlo += watch.getInterval();
 
   // watch.start();
   // gdust_simpson.match(ts);
   // watch.stop();
   // time_simpson += watch.getInterval();
 
-  watch.start();
-  dust.match(ts);
-  watch.stop();
-  time_cpu += watch.getInterval();
+  // watch.start();
+  // dust.match(ts);
+  // watch.stop();
+  // time_cpu += watch.getInterval();
 
   watch.start();
   dust_simpson.match(ts);
   watch.stop();
   time_cpu_simpson += watch.getInterval();
 
-  std::cout << "#montecarlo#"       << time_montecarlo <<     "#"   << std::endl;
-  //std::cout << "#simpson#" << time_simpson << "#" << std::endl;
-  std::cout << "#cpu#" << time_cpu     << "#" << std::endl;
+  // std::cout << "#montecarlo#"       << time_montecarlo <<     "#"   << std::endl;
+  // std::cout << "#simpson#" << time_simpson << "#" << std::endl;
+  // std::cout << "#cpu#" << time_cpu     << "#" << std::endl;
   std::cout << "#cpu_simpson#" << time_cpu_simpson     << "#" << std::endl;
 }
 

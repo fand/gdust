@@ -54,6 +54,9 @@ var exp = function (num) {
 };
 
 var finish = function () {
+  for (var k in results) {
+    results[k] /= (limit * 1.0);
+  }
   console.log(JSON.stringify(results));
   console.log('END');
 };
