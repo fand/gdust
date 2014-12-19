@@ -483,51 +483,72 @@ exp8(int argc, char **argv) {
     return;
   }
 
-  std::vector<std::string>  files = vm["file"].as< std::vector<std::string> >();
+  std::vector<std::string> files = vm["file"].as< std::vector<std::string> >();
   int k = vm["topk"].as< int >();
   int target = vm["target"].as< int >();
 
-  TimeSeriesCollection db(files[0].c_str(), 2, -1);
-  db.normalize();
-  TimeSeriesCollection db2(files[1].c_str(), 2, -1);
-  db2.normalize();
+  // Ground truth
+  TimeSeriesCollection db_truth(files[0].c_str(), 2, -1);
+  db_truth.normalize();
+  Euclidean  eucl_truth(db_truth, 0);
 
+  TimeSeriesCollection db(files[1].c_str(), 2, -1);
+  db.normalize();
   Euclidean  eucl(db, 0);
   DUST dust(db);
+  DUST dust_simpson(db, CPUIntegrator::Simpson);
   GDUST gdust(db);
   GDUST gdust_simpson(db, Integrator::Simpson);
 
-  Watch watch;
-
-  std::cout << "top k: " << k << std::endl;
-
-  if (target < 0 || db2.sequences.size() < target) {
+  std::cerr << "top k: " << k << std::endl;
+  std::cerr << "################ ts : " << target << std::endl;
+  if (target < 0 || db.sequences.size() < target) {
     std::cout << "Invalid index! : " << target << std::endl;
     exit(-1);
   }
-  std::cout << "################ ts : " << target << std::endl;
-  TimeSeries &ts = db2.sequences[target];
+  TimeSeries &ts = db.sequences[target];
 
+  std::vector<int>top_truth         = eucl_truth.topK(ts, k);
   std::vector<int>top_eucl          = eucl.topK(ts, k);
   std::vector<int>top_dust          = dust.topK(ts, k);
+  std::vector<int>top_dust_simpson  = dust_simpson.topK(ts, k);
   std::vector<int>top_gdust         = gdust.topK(ts, k);
   std::vector<int>top_gdust_simpson = gdust_simpson.topK(ts, k);
 
-  std::cout << "eucl:          ";
-  for (int j = 0; j < k; j++) { std::cout << top_eucl[j] << ", "; }
-  std::cout << std::endl;
+  // Output JSON
+  std::cout << "{" << std::endl;
 
-  std::cout << "dust:          ";
-  for (int j = 0; j < k; j++) { std::cout << top_dust[j] << ", "; }
-  std::cout << std::endl;
+  std::cout << "\"TRUTH\": [";
+  std::cout << top_truth[0];
+  for (int j = 1; j < k; j++) { std::cout << ", " << top_truth[j]; }
+  std::cout << "]," << std::endl;
 
-  std::cout << "gdust:         ";
-  for (int j = 0; j < k; j++) { std::cout << top_gdust[j] << ", "; }
-  std::cout << std::endl;
+  std::cout << "\"Euclidean\": [";
+  std::cout << top_eucl[0];
+  for (int j = 1; j < k; j++) { std::cout << ", " << top_eucl[j]; }
+  std::cout << "]," << std::endl;
 
-  std::cout << "gdust_simpson: ";
-  for (int j = 0; j < k; j++) { std::cout << top_gdust_simpson[j] << ", "; }
-  std::cout << std::endl;
+  std::cout << "\"CPU_MonteCarlo\": [";
+  std::cout << top_dust[0];
+  for (int j = 1; j < k; j++) { std::cout << ", " << top_dust[j]; }
+  std::cout << "]," << std::endl;
+
+  std::cout << "\"CPU_Simpson\": [";
+  std::cout << top_dust_simpson[0];
+  for (int j = 1; j < k; j++) { std::cout << ", " << top_dust_simpson[j]; }
+  std::cout << "]," << std::endl;
+
+  std::cout << "\"GPU_MonteCarlo\": [";
+  std::cout << top_gdust[0];
+  for (int j = 1; j < k; j++) { std::cout << ", " << top_gdust[j]; }
+  std::cout << "]," << std::endl;
+
+  std::cout << "\"GPU_Simpson\": [";
+  std::cout << top_gdust_simpson[0];
+  for (int j = 1; j < k; j++) { std::cout << ", " << top_gdust_simpson[j]; }
+  std::cout << "]" << std::endl;
+
+  std::cout << "}" << std::endl;
 }
 
 //!
