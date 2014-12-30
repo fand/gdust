@@ -507,8 +507,9 @@ exp8(int argc, char **argv) {
     exit(-1);
   }
   TimeSeries &ts = db.sequences[target];
+  TimeSeries &ts_truth = db_truth.sequences[target];
 
-  std::vector<int>top_truth         = eucl_truth.topK(ts, k);
+  std::vector<int>top_truth         = eucl_truth.topK(ts_truth, k);
   std::vector<int>top_eucl          = eucl.topK(ts, k);
   std::vector<int>top_dust          = dust.topK(ts, k);
   std::vector<int>top_dust_simpson  = dust_simpson.topK(ts, k);
