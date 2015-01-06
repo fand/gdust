@@ -55,9 +55,9 @@ boost::program_options::variables_map initOpt(int argc, char **argv) {
   po::options_description visible("Allowed options");
   generic.add_options()("exp", po::value< std::vector<int> >(), "exp number to run")("test", "run tests");
   generic.add_options()("target", po::value< int >(), "index of target timeseries")("test", "run tests");
-  generic.add_options()("targets", po::value< std::vector<int> >(), "index of target timeseries")("test", "run tests");
+  generic.add_options()("targets", po::value< std::vector<int> >()->multitoken(), "index of target timeseries")("test", "run tests");
   generic.add_options()("topk,k", po::value< int >(), "top k number")("test", "run tests");
-  hidden.add_options()("file", po::value< std::vector<std::string> >(), "input file");
+  hidden.add_options()("file", po::value< std::vector<std::string> >()->multitoken(), "input file");
   visible.add(generic).add(hidden);
 
   po::positional_options_description p;
@@ -566,8 +566,9 @@ exp9(int argc, char **argv) {
   std::vector<std::string> files = vm["file"].as< std::vector<std::string> >();
   std::vector<int> targets = vm["targets"].as< std::vector<int> >();
 
+  std::cout << "reading : " << files[0].c_str() << std::endl;
   TimeSeriesCollection db(files[0].c_str(), 2, -1);
-  db.normalize();
+  //db.normalize();
 
   DUST dust(db);
   DUST dust_simpson(db, CPUIntegrator::Simpson);
@@ -582,8 +583,9 @@ exp9(int argc, char **argv) {
 
   double dgm, dgs, dcm, dcs;
 
-  int i = targets[0];
-  int j = targets[1];
+  int i = targets.at(0);
+  int j = targets.at(1);
+  std::cout << "matching " << i << " : " << j << std::endl;
 
   TimeSeries &ts1 = db.sequences[i];
   TimeSeries &ts2 = db.sequences[j];
@@ -598,19 +600,30 @@ exp9(int argc, char **argv) {
   watch.stop();
   time_simpson += watch.getInterval();
 
-  watch.start();
-  dcm = dust.distance(ts1, ts2);
-  watch.stop();
-  time_cpu += watch.getInterval();
+  // watch.start();
+  // dcm = dust.distance(ts1, ts2);
+  // watch.stop();
+  // time_cpu += watch.getInterval();
 
   watch.start();
   dcs = dust_simpson.distance(ts1, ts2);
   watch.stop();
   time_cpu_simpson += watch.getInterval();
 
+  std::cout << "ts1:" << std::endl;
+  for (int k = 0; k < 3; k++) {
+    RandomVariable v = ts1.at(k);
+    std::cout << "\t" << v.groundtruth << ":" << v.observation << ":" << v.stddev << std::endl;
+  }
+  std::cout << "ts2" << std::endl;
+  for (int k = 0; k < 3; k++) {
+    RandomVariable v = ts2.at(k);
+    std::cout << "\t" << v.groundtruth << ":" << v.observation << ":" << v.stddev << std::endl;
+  }
+
   std::cout << "{" << std::endl;
   // DEBUG
-  if (0) {
+  if (1) {
     std::cout << "\"distance\": {" << std::endl;
     std::cout << "\"MonteCarlo\": " << dgm << std::endl;
     std::cout << ", \"Simpson\": "  << dgs << std::endl;
