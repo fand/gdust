@@ -24,6 +24,7 @@
 #include "Watch.hpp"
 #include "config.hpp"
 #include "kernel.hpp"
+#include "RandomVariable.hpp"
 #include "cutil.hpp"
 
 extern char *optarg;
@@ -46,6 +47,7 @@ void exp7(int argc, char **argv);
 void exp8(int argc, char **argv);
 void exp9(int argc, char **argv);
 void exp10(int argc, char **argv);
+void exp11(int argc, char **argv);
 void ftest(int argc, char **argv);
 
 boost::program_options::variables_map initOpt(int argc, char **argv) {
@@ -94,6 +96,7 @@ main(int argc, char **argv) {
       case 8: exp8(argc, argv); break;
       case 9: exp9(argc, argv); break;
       case 10: exp10(argc, argv); break;
+      case 11: exp11(argc, argv); break;
       }
     }
   } else if (vm.count("test")) {
@@ -697,6 +700,103 @@ exp10(int argc, char **argv) {
   // std::cout << "#cpu#" << time_cpu     << "#" << std::endl;
   std::cout << "#cpu_simpson#" << time_cpu_simpson     << "#" << std::endl;
 }
+
+// Check execution time of top-k in Dallachiesa's way
+void
+exp11(int argc, char **argv) {
+
+  boost::program_options::variables_map vm = initOpt(argc, argv);
+  if (!(vm.count("file"))) {
+    std::cerr << "Please specify input files!" << std::endl;
+    return;
+  }
+
+  std::vector<std::string> files = vm["file"].as< std::vector<std::string> >();
+  int k = vm["topk"].as< int >();
+  int target = vm["target"].as< int >();
+
+  // Ground truth
+  TimeSeriesCollection db_truth(files[0].c_str(), 2, -1);
+  db_truth.normalize();
+  Euclidean  eucl_truth(db_truth, 0);
+
+  TimeSeriesCollection db(files[1].c_str(), 2, -1);
+  db.normalize();
+  Euclidean  eucl(db, 0);
+  //Euclidean  eucl(db_truth);   // exact mode
+  DUST dust(db);
+  DUST dust_simpson(db, CPUIntegrator::Simpson);
+  GDUST gdust(db);
+  GDUST gdust_simpson(db, Integrator::Simpson);
+
+  // std::cerr << "top k: " << k << std::endl;
+  // std::cerr << "################ ts : " << target << std::endl;
+  if (target < 0 || db.sequences.size() < target) {
+    std::cout << "Invalid index! : " << target << std::endl;
+    exit(-1);
+  }
+  TimeSeries &ts = db.sequences[target];
+  TimeSeries &ts_truth = db_truth.sequences[target];
+
+
+  // get threashold and ID for it
+  std::pair<int, float> kth = eucl_truth.topKThreshold(ts_truth, k);
+  std::cerr << "kth: " << kth.first << ", " << kth.second << std::endl;
+
+  // RandomVariable v = db_truth.sequences[kth.first].at(0);
+  // std::cerr << "MMMMM ??? : " << v.groundtruth << std::endl;
+
+  float threshold_eucl = eucl.distance(ts, db.sequences[kth.first]);
+  float threshold_dust = dust.distance(ts, db.sequences[kth.first]);
+  float threshold_gdust = gdust.distance(ts, db.sequences[kth.first]);
+  std::cerr << "threshold eucl: "  << threshold_eucl  << std::endl;
+  std::cerr << "threshold dust: "  << threshold_dust  << std::endl;
+  std::cerr << "threshold gdust: " << threshold_gdust << std::endl;
+
+  std::vector<int>top_truth         = eucl_truth.rangeQuery(ts_truth, kth.second);
+  std::vector<int>top_eucl          = eucl.rangeQuery(ts, threshold_eucl);
+  std::vector<int>top_dust          = dust.rangeQuery(ts, threshold_dust);
+  std::vector<int>top_dust_simpson  = dust_simpson.rangeQuery(ts, threshold_dust);
+  std::vector<int>top_gdust         = gdust.rangeQuery(ts, threshold_gdust);
+  std::vector<int>top_gdust_simpson = gdust_simpson.rangeQuery(ts, threshold_gdust);
+
+  // Output JSON
+  std::cout << "{" << std::endl;
+
+  std::cout << "\"TRUTH\": [";
+  std::cout << top_truth[0];
+  for (int j = 1; j < top_truth.size(); j++) { std::cout << ", " << top_truth[j]; }
+  std::cout << "]," << std::endl;
+
+  std::cout << "\"Euclidean\": [";
+  std::cout << top_eucl[0];
+  for (int j = 1; j < top_eucl.size(); j++) { std::cout << ", " << top_eucl[j]; }
+  std::cout << "]," << std::endl;
+
+  std::cout << "\"CPU_MonteCarlo\": [";
+  std::cout << top_dust[0];
+  for (int j = 1; j < top_dust.size(); j++) { std::cout << ", " << top_dust[j]; }
+  std::cout << "]," << std::endl;
+
+  std::cout << "\"CPU_Simpson\": [";
+  std::cout << top_dust_simpson[0];
+  for (int j = 1; j < top_dust_simpson.size(); j++) { std::cout << ", " << top_dust_simpson[j]; }
+  std::cout << "]," << std::endl;
+
+  std::cout << "\"GPU_MonteCarlo\": [";
+  std::cout << top_gdust[0];
+  for (int j = 1; j < top_gdust.size(); j++) { std::cout << ", " << top_gdust[j]; }
+  std::cout << "]," << std::endl;
+
+  std::cout << "\"GPU_Simpson\": [";
+  std::cout << top_gdust_simpson[0];
+  for (int j = 1; j < top_gdust_simpson.size(); j++) { std::cout << ", " << top_gdust_simpson[j]; }
+  std::cout << "]" << std::endl;
+
+  std::cout << "}" << std::endl;
+}
+
+
 
 void
 cleanUp() {

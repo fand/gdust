@@ -25,11 +25,12 @@ double Euclidean::distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) 
     }
   } else {
     for (int i = 0; i < ts_length; i++) {
-      dist += pow(ts1.at(i).observation -ts2.at(i).observation, 2);
+      dist += pow(ts1.at(i).observation - ts2.at(i).observation, 2);
     }
   }
 
   dist = sqrt(dist);
+  //  std::cerr << "eucl: " << dist << std::endl;
   return dist;
 }
 

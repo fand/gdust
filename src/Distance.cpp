@@ -165,3 +165,28 @@ Distance::topK(const TimeSeries &ts, int k) {
   }
   return ret;
 }
+
+std::pair<int, float>
+Distance::topKThreshold(const TimeSeries &ts, int k) {
+  const TimeSeriesCollection *db = this->collection;
+  int ts_length = ts.length();
+  for (int i = 0; i < db->sequences.size(); i++) {
+    ts_length = std::min(ts_length, (int)db->sequences[i].length());
+  }
+
+  // Get distances
+  std::vector<std::pair<int, float> > pairs;
+  for (int i = 0; i < db->sequences.size(); i++) {
+    float d = this->distance(ts, db->sequences[i], ts_length);
+    pairs.push_back(std::make_pair(i, d));
+  }
+
+  // Sort by value
+  std::sort(pairs.begin(), pairs.end(), comp);
+
+  //RandomVariable v = db->sequences[pairs[k - 1].first].at(0);
+  //std::cerr << "TRUTH ??? : " << v.groundtruth << std::endl;
+
+  // Return the indexes of top K.
+  return pairs[k - 1];
+}

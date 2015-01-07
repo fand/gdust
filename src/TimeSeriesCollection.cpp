@@ -100,3 +100,5 @@ int TimeSeriesCollection::size() const {
 const TimeSeries& TimeSeriesCollection::at(int index) const {
   return this->sequences.at(index);
 }
+
+std::pair

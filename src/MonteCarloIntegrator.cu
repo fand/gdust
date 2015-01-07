@@ -73,7 +73,7 @@ MonteCarloIntegrator::distance(const TimeSeries &ts1, const TimeSeries &ts2, int
     dust_sum += dusts[i];
     //    std::cout << "### " << sqrt(dusts[i]) << std::endl;
   }
-  std::cout << "ts length: "  << ts_length << std::endl;
+  //std::cout << "ts length: "  << ts_length << std::endl;
 
   free(tuples);
   free(dusts);
