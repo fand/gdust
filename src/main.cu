@@ -701,6 +701,16 @@ exp10(int argc, char **argv) {
   std::cout << "#cpu_simpson#" << time_cpu_simpson     << "#" << std::endl;
 }
 
+int prcount (std::vector<int> truth, std::vector<int> estimate) {
+  int count = 0;
+  for (int i = 0; i < truth.size(); i++) {
+    for (int j = 0; j < estimate.size(); j++) {
+      if (truth[i] == estimate[j]) { count++; }
+    }
+  }
+  return count;
+}
+
 // Check execution time of top-k in Dallachiesa's way
 void
 exp11(int argc, char **argv) {
@@ -760,39 +770,38 @@ exp11(int argc, char **argv) {
   std::vector<int>top_gdust         = gdust.rangeQuery(ts, threshold_gdust);
   std::vector<int>top_gdust_simpson = gdust_simpson.rangeQuery(ts, threshold_gdust);
 
+  double p, r, c;
+  p = 0.0; r = 0.0;
+
+  c = (double)prcount(top_truth, top_eucl);
+  p = c / (double)top_eucl.size();
+  r = c / (double)top_truth.size();
+  double f_eucl = (p + r == 0) ? 0 : (2 * p * r) / (p + r);
+  c = (double)prcount(top_truth, top_dust);
+  p = c / (double)top_dust.size();
+  r = c / (double)top_truth.size();
+  double f_dust = (p + r == 0) ? 0 : (2 * p * r) / (p + r);
+  c = (double)prcount(top_truth, top_dust_simpson);
+  p = c / (double)top_dust_simpson.size();
+  r = c / (double)top_truth.size();
+  double f_dust_simpson = (p + r == 0) ? 0 : (2 * p * r) / (p + r);
+  c = (double)prcount(top_truth, top_gdust);
+  p = c / (double)top_gdust.size();
+  r = c / (double)top_truth.size();
+  double f_gdust = (p + r == 0) ? 0 : (2 * p * r) / (p + r);
+  c = (double)prcount(top_truth, top_gdust_simpson);
+  p = c / (double)top_gdust_simpson.size();
+  r = c / (double)top_truth.size();
+  double f_gdust_simpson = (p + r == 0) ? 0 : (2 * p * r) / (p + r);
+
   // Output JSON
   std::cout << "{" << std::endl;
 
-  std::cout << "\"TRUTH\": [";
-  std::cout << top_truth[0];
-  for (int j = 1; j < top_truth.size(); j++) { std::cout << ", " << top_truth[j]; }
-  std::cout << "]," << std::endl;
-
-  std::cout << "\"Euclidean\": [";
-  std::cout << top_eucl[0];
-  for (int j = 1; j < top_eucl.size(); j++) { std::cout << ", " << top_eucl[j]; }
-  std::cout << "]," << std::endl;
-
-  std::cout << "\"CPU_MonteCarlo\": [";
-  std::cout << top_dust[0];
-  for (int j = 1; j < top_dust.size(); j++) { std::cout << ", " << top_dust[j]; }
-  std::cout << "]," << std::endl;
-
-  std::cout << "\"CPU_Simpson\": [";
-  std::cout << top_dust_simpson[0];
-  for (int j = 1; j < top_dust_simpson.size(); j++) { std::cout << ", " << top_dust_simpson[j]; }
-  std::cout << "]," << std::endl;
-
-  std::cout << "\"GPU_MonteCarlo\": [";
-  std::cout << top_gdust[0];
-  for (int j = 1; j < top_gdust.size(); j++) { std::cout << ", " << top_gdust[j]; }
-  std::cout << "]," << std::endl;
-
-  std::cout << "\"GPU_Simpson\": [";
-  std::cout << top_gdust_simpson[0];
-  for (int j = 1; j < top_gdust_simpson.size(); j++) { std::cout << ", " << top_gdust_simpson[j]; }
-  std::cout << "]" << std::endl;
-
+  std::cout << "\"Euclidean\": " << f_eucl << "," << std::endl;
+  std::cout << "\"CPU_MonteCarlo\": " << f_dust << "," << std::endl;
+  std::cout << "\"CPU_Simpson\": " << f_dust_simpson << "," << std::endl;
+  std::cout << "\"GPU_MonteCarlo\": " << f_gdust << "," << std::endl;
+  std::cout << "\"GPU_Simpson\": " << f_gdust_simpson << std::endl;
   std::cout << "}" << std::endl;
 }
 
