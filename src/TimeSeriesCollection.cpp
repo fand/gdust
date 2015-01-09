@@ -29,7 +29,6 @@ TimeSeriesCollection::readFile(const char *path, int distribution, int limitN) {
     if (limitN != -1 && static_cast<int>(sequences.size()) == limitN) {
       break;
     }
-
     sequences.push_back(TimeSeries(line, distribution));
     sequences[sequences.size() - 1].setId(sequences.size());
   }

@@ -30,7 +30,6 @@ double Euclidean::distance(const TimeSeries &ts1, const TimeSeries &ts2, int n) 
   }
 
   dist = sqrt(dist);
-  //  std::cerr << "eucl: " << dist << std::endl;
   return dist;
 }
 

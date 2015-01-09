@@ -727,11 +727,11 @@ exp11(int argc, char **argv) {
 
   // Ground truth
   TimeSeriesCollection db_truth(files[0].c_str(), 2, -1);
-  db_truth.normalize();
+  //db_truth.normalize();
   Euclidean  eucl_truth(db_truth, 0);
 
   TimeSeriesCollection db(files[1].c_str(), 2, -1);
-  db.normalize();
+  //db.normalize();
   Euclidean  eucl(db, 0);
   //Euclidean  eucl(db_truth);   // exact mode
   DUST dust(db);
@@ -793,6 +793,13 @@ exp11(int argc, char **argv) {
   p = c / (double)top_gdust_simpson.size();
   r = c / (double)top_truth.size();
   double f_gdust_simpson = (p + r == 0) ? 0 : (2 * p * r) / (p + r);
+
+  // Prevent NaN
+  f_eucl = NOTNANINF(f_eucl) ? f_eucl : 0;
+  f_dust = NOTNANINF(f_dust) ? f_dust : 0;
+  f_dust_simpson = NOTNANINF(f_dust_simpson) ? f_dust_simpson : 0;
+  f_gdust = NOTNANINF(f_gdust) ? f_gdust : 0;
+  f_gdust_simpson = NOTNANINF(f_gdust_simpson) ? f_gdust_simpson : 0;
 
   // Output JSON
   std::cout << "{" << std::endl;
