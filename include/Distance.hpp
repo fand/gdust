@@ -15,6 +15,8 @@ class Distance {
   virtual std::vector<int> rangeQuery(TimeSeries ts, double threshold);
   virtual std::vector<int> topK(const TimeSeries &ts, int k);
 
+  virtual std::pair<int, float> topKThreshold(const TimeSeries &ts, int k);
+
  protected:
   const TimeSeriesCollection *collection;
   void calcCost(const TimeSeries &ts1, const TimeSeries &ts2,

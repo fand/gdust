@@ -44,7 +44,7 @@ CPUSimpsonIntegrator::distance(const TimeSeries &ts1, const TimeSeries &ts2, int
 double
 CPUSimpsonIntegrator::dust_kernel(double *xy, int time) {
   int division_all = DIVISION * RANGE_WIDTH;
-  double width = 1.0f / static_cast<double>(DIVISION);
+  double width = 1.0 / static_cast<double>(DIVISION);
 
   double int1, int2, int3;
   int1 = int2 = int3 = 0.0;
@@ -59,10 +59,10 @@ CPUSimpsonIntegrator::dust_kernel(double *xy, int time) {
 
   if (int1 < VERYSMALL) int1 = VERYSMALL;
   if (int2 < VERYSMALL) int2 = VERYSMALL;
-  if (int3 < 0.0f)      int3 = 0.0f;
+  if (int3 < 0.0)       int3 = 0.0;
 
   double dust = -log10(int3 / (int1 * int2));
-  if (dust < 0.0) { dust = 0.0f; }
+  if (dust < 0.0) { dust = 0.0; }
 
   return  dust;
 }

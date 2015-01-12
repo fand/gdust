@@ -41,7 +41,7 @@ TimeSeries::readString(const std::string &s, int distribution) {
     line >> groundtruth;
     line >> observation;
     line >> stddev;
-
+    //std::cout << "line ###  " << groundtruth << ":" << observation << ":" << stddev <<  std::endl;
     RandomVariable r(distribution, groundtruth, observation, stddev);
     this->sequence.push_back(r);
   }
@@ -101,13 +101,13 @@ TimeSeries::normalize() {
 
   for (unsigned int i = 1; i < this->sequence.size(); i++) {
     tmp = this->sequence[i].observation;
-    if (min > tmp) min = tmp;
-    if (max < tmp) max = tmp;
+    min = (min < tmp) ? min : tmp;
+    max = (tmp < max) ? max : tmp;
   }
 
   if (min == max) return;
 
-  float ratio = 1.0f / abs(max-min);
+  float ratio = 1.0f / (max - min);
 
   for (unsigned int i = 0; i < this->sequence.size(); i++) {
     this->sequence[i].groundtruth = this->sequence[i].groundtruth * ratio;

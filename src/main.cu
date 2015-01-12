@@ -24,6 +24,7 @@
 #include "Watch.hpp"
 #include "config.hpp"
 #include "kernel.hpp"
+#include "RandomVariable.hpp"
 #include "cutil.hpp"
 
 extern char *optarg;
@@ -46,6 +47,7 @@ void exp7(int argc, char **argv);
 void exp8(int argc, char **argv);
 void exp9(int argc, char **argv);
 void exp10(int argc, char **argv);
+void exp11(int argc, char **argv);
 void ftest(int argc, char **argv);
 
 boost::program_options::variables_map initOpt(int argc, char **argv) {
@@ -55,9 +57,9 @@ boost::program_options::variables_map initOpt(int argc, char **argv) {
   po::options_description visible("Allowed options");
   generic.add_options()("exp", po::value< std::vector<int> >(), "exp number to run")("test", "run tests");
   generic.add_options()("target", po::value< int >(), "index of target timeseries")("test", "run tests");
-  generic.add_options()("targets", po::value< std::vector<int> >(), "index of target timeseries")("test", "run tests");
+  generic.add_options()("targets", po::value< std::vector<int> >()->multitoken(), "index of target timeseries")("test", "run tests");
   generic.add_options()("topk,k", po::value< int >(), "top k number")("test", "run tests");
-  hidden.add_options()("file", po::value< std::vector<std::string> >(), "input file");
+  hidden.add_options()("file", po::value< std::vector<std::string> >()->multitoken(), "input file");
   visible.add(generic).add(hidden);
 
   po::positional_options_description p;
@@ -94,6 +96,7 @@ main(int argc, char **argv) {
       case 8: exp8(argc, argv); break;
       case 9: exp9(argc, argv); break;
       case 10: exp10(argc, argv); break;
+      case 11: exp11(argc, argv); break;
       }
     }
   } else if (vm.count("test")) {
@@ -566,8 +569,9 @@ exp9(int argc, char **argv) {
   std::vector<std::string> files = vm["file"].as< std::vector<std::string> >();
   std::vector<int> targets = vm["targets"].as< std::vector<int> >();
 
+  std::cout << "reading : " << files[0].c_str() << std::endl;
   TimeSeriesCollection db(files[0].c_str(), 2, -1);
-  db.normalize();
+  //db.normalize();
 
   DUST dust(db);
   DUST dust_simpson(db, CPUIntegrator::Simpson);
@@ -582,8 +586,9 @@ exp9(int argc, char **argv) {
 
   double dgm, dgs, dcm, dcs;
 
-  int i = targets[0];
-  int j = targets[1];
+  int i = targets.at(0);
+  int j = targets.at(1);
+  std::cout << "matching " << i << " : " << j << std::endl;
 
   TimeSeries &ts1 = db.sequences[i];
   TimeSeries &ts2 = db.sequences[j];
@@ -598,19 +603,30 @@ exp9(int argc, char **argv) {
   watch.stop();
   time_simpson += watch.getInterval();
 
-  watch.start();
-  dcm = dust.distance(ts1, ts2);
-  watch.stop();
-  time_cpu += watch.getInterval();
+  // watch.start();
+  // dcm = dust.distance(ts1, ts2);
+  // watch.stop();
+  // time_cpu += watch.getInterval();
 
   watch.start();
   dcs = dust_simpson.distance(ts1, ts2);
   watch.stop();
   time_cpu_simpson += watch.getInterval();
 
+  std::cout << "ts1:" << std::endl;
+  for (int k = 0; k < 3; k++) {
+    RandomVariable v = ts1.at(k);
+    std::cout << "\t" << v.groundtruth << ":" << v.observation << ":" << v.stddev << std::endl;
+  }
+  std::cout << "ts2" << std::endl;
+  for (int k = 0; k < 3; k++) {
+    RandomVariable v = ts2.at(k);
+    std::cout << "\t" << v.groundtruth << ":" << v.observation << ":" << v.stddev << std::endl;
+  }
+
   std::cout << "{" << std::endl;
   // DEBUG
-  if (0) {
+  if (1) {
     std::cout << "\"distance\": {" << std::endl;
     std::cout << "\"MonteCarlo\": " << dgm << std::endl;
     std::cout << ", \"Simpson\": "  << dgs << std::endl;
@@ -684,6 +700,119 @@ exp10(int argc, char **argv) {
   // std::cout << "#cpu#" << time_cpu     << "#" << std::endl;
   std::cout << "#cpu_simpson#" << time_cpu_simpson     << "#" << std::endl;
 }
+
+int prcount (std::vector<int> truth, std::vector<int> estimate) {
+  int count = 0;
+  for (int i = 0; i < truth.size(); i++) {
+    for (int j = 0; j < estimate.size(); j++) {
+      if (truth[i] == estimate[j]) { count++; }
+    }
+  }
+  return count;
+}
+
+// Check execution time of top-k in Dallachiesa's way
+void
+exp11(int argc, char **argv) {
+
+  boost::program_options::variables_map vm = initOpt(argc, argv);
+  if (!(vm.count("file"))) {
+    std::cerr << "Please specify input files!" << std::endl;
+    return;
+  }
+
+  std::vector<std::string> files = vm["file"].as< std::vector<std::string> >();
+  int k = vm["topk"].as< int >();
+  int target = vm["target"].as< int >();
+
+  // Ground truth
+  TimeSeriesCollection db_truth(files[0].c_str(), 2, -1);
+  //db_truth.normalize();
+  Euclidean  eucl_truth(db_truth, 0);
+
+  TimeSeriesCollection db(files[1].c_str(), 2, -1);
+  //db.normalize();
+  Euclidean  eucl(db, 0);
+  //Euclidean  eucl(db_truth);   // exact mode
+  DUST dust(db);
+  DUST dust_simpson(db, CPUIntegrator::Simpson);
+  GDUST gdust(db);
+  GDUST gdust_simpson(db, Integrator::Simpson);
+
+  // std::cerr << "top k: " << k << std::endl;
+  // std::cerr << "################ ts : " << target << std::endl;
+  if (target < 0 || db.sequences.size() < target) {
+    std::cout << "Invalid index! : " << target << std::endl;
+    exit(-1);
+  }
+  TimeSeries &ts = db.sequences[target];
+  TimeSeries &ts_truth = db_truth.sequences[target];
+
+
+  // get threashold and ID for it
+  std::pair<int, float> kth = eucl_truth.topKThreshold(ts_truth, k);
+  std::cerr << "kth: " << kth.first << ", " << kth.second << std::endl;
+
+  // RandomVariable v = db_truth.sequences[kth.first].at(0);
+  // std::cerr << "MMMMM ??? : " << v.groundtruth << std::endl;
+
+  float threshold_eucl = eucl.distance(ts, db.sequences[kth.first]);
+  float threshold_dust = dust.distance(ts, db.sequences[kth.first]);
+  float threshold_gdust = gdust.distance(ts, db.sequences[kth.first]);
+  std::cerr << "threshold eucl: "  << threshold_eucl  << std::endl;
+  std::cerr << "threshold dust: "  << threshold_dust  << std::endl;
+  std::cerr << "threshold gdust: " << threshold_gdust << std::endl;
+
+  std::vector<int>top_truth         = eucl_truth.rangeQuery(ts_truth, kth.second);
+  std::vector<int>top_eucl          = eucl.rangeQuery(ts, threshold_eucl);
+  std::vector<int>top_dust          = dust.rangeQuery(ts, threshold_dust);
+  std::vector<int>top_dust_simpson  = dust_simpson.rangeQuery(ts, threshold_dust);
+  std::vector<int>top_gdust         = gdust.rangeQuery(ts, threshold_gdust);
+  std::vector<int>top_gdust_simpson = gdust_simpson.rangeQuery(ts, threshold_gdust);
+
+  double p, r, c;
+  p = 0.0; r = 0.0;
+
+  c = (double)prcount(top_truth, top_eucl);
+  p = c / (double)top_eucl.size();
+  r = c / (double)top_truth.size();
+  double f_eucl = (p + r == 0) ? 0 : (2 * p * r) / (p + r);
+  c = (double)prcount(top_truth, top_dust);
+  p = c / (double)top_dust.size();
+  r = c / (double)top_truth.size();
+  double f_dust = (p + r == 0) ? 0 : (2 * p * r) / (p + r);
+  c = (double)prcount(top_truth, top_dust_simpson);
+  p = c / (double)top_dust_simpson.size();
+  r = c / (double)top_truth.size();
+  double f_dust_simpson = (p + r == 0) ? 0 : (2 * p * r) / (p + r);
+  c = (double)prcount(top_truth, top_gdust);
+  p = c / (double)top_gdust.size();
+  r = c / (double)top_truth.size();
+  double f_gdust = (p + r == 0) ? 0 : (2 * p * r) / (p + r);
+  c = (double)prcount(top_truth, top_gdust_simpson);
+  p = c / (double)top_gdust_simpson.size();
+  r = c / (double)top_truth.size();
+  double f_gdust_simpson = (p + r == 0) ? 0 : (2 * p * r) / (p + r);
+
+  // Prevent NaN
+  f_eucl = NOTNANINF(f_eucl) ? f_eucl : 0;
+  f_dust = NOTNANINF(f_dust) ? f_dust : 0;
+  f_dust_simpson = NOTNANINF(f_dust_simpson) ? f_dust_simpson : 0;
+  f_gdust = NOTNANINF(f_gdust) ? f_gdust : 0;
+  f_gdust_simpson = NOTNANINF(f_gdust_simpson) ? f_gdust_simpson : 0;
+
+  // Output JSON
+  std::cout << "{" << std::endl;
+
+  std::cout << "\"Euclidean\": " << f_eucl << "," << std::endl;
+  std::cout << "\"CPU_MonteCarlo\": " << f_dust << "," << std::endl;
+  std::cout << "\"CPU_Simpson\": " << f_dust_simpson << "," << std::endl;
+  std::cout << "\"GPU_MonteCarlo\": " << f_gdust << "," << std::endl;
+  std::cout << "\"GPU_Simpson\": " << f_gdust_simpson << std::endl;
+  std::cout << "}" << std::endl;
+}
+
+
 
 void
 cleanUp() {

@@ -122,7 +122,6 @@ Distance::match(const TimeSeries &ts) {
 
   for (int i = 1; i < db->sequences.size(); i++) {
     float d = this->distance(ts, db->sequences[i], ts_length);
-    //std::cout << "dis: " << d << std::endl;
     if (d < distance_min) {
       distance_min = d;
       i_min = i;
@@ -164,4 +163,26 @@ Distance::topK(const TimeSeries &ts, int k) {
     ret.push_back(pairs[i].first);
   }
   return ret;
+}
+
+std::pair<int, float>
+Distance::topKThreshold(const TimeSeries &ts, int k) {
+  const TimeSeriesCollection *db = this->collection;
+  int ts_length = ts.length();
+  for (int i = 0; i < db->sequences.size(); i++) {
+    ts_length = std::min(ts_length, (int)db->sequences[i].length());
+  }
+
+  // Get distances
+  std::vector<std::pair<int, float> > pairs;
+  for (int i = 0; i < db->sequences.size(); i++) {
+    float d = this->distance(ts, db->sequences[i], ts_length);
+    pairs.push_back(std::make_pair(i, d));
+  }
+
+  // Sort by value
+  std::sort(pairs.begin(), pairs.end(), comp);
+
+  // Return the indexes of top K.
+  return pairs[k - 1];
 }

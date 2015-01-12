@@ -39,7 +39,6 @@ MonteCarloIntegrator::distance(const TimeSeries &ts1, const TimeSeries &ts2, int
   for (int i = 0; i < ts_length; i++) {
     RandomVariable x = ts1.at(i);
     RandomVariable y = ts2.at(i);
-
     tuples[idx]     = static_cast<float>(x.distribution);
     tuples[idx + 1] = x.observation;
     tuples[idx + 2] = x.stddev;
@@ -72,7 +71,9 @@ MonteCarloIntegrator::distance(const TimeSeries &ts1, const TimeSeries &ts2, int
   float dust_sum = 0;
   for (int i = 0; i < ts_length; i++) {
     dust_sum += dusts[i];
+    //    std::cout << "### " << sqrt(dusts[i]) << std::endl;
   }
+  //std::cout << "ts length: "  << ts_length << std::endl;
 
   free(tuples);
   free(dusts);
